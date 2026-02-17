@@ -12,7 +12,6 @@
     <meta name="application-name" content="Kalkulator ADS">
 
     <title>Kalkulator ADS</title>
-    <!-- PERBAIKAN: Menambahkan id="manifest-placeholder" agar JS bisa menemukannya -->
     <link rel="manifest" id="manifest-placeholder" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
@@ -34,12 +33,11 @@
         }
 
         body {
-            font-family: sans-serif; /* Font standar agar aman di hp lama */
+            font-family: sans-serif;
             background-color: var(--bg-color);
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
             display: grid;
             grid-template-columns: 1fr;
-            /* Fallback layout untuk browser lama */
             grid-template-rows: auto 40% 1fr; 
             grid-template-areas: "toolbar" "display" "keypad";
         }
@@ -59,7 +57,7 @@
         .toolbar {
             grid-area: toolbar; display: flex; justify-content: center; align-items: center;
             background: #e2e8f0; z-index: 5; min-height: 40px; padding: 5px; 
-            gap: 10px; grid-gap: 10px; /* Support lama */
+            gap: 10px; grid-gap: 10px; 
         }
         
         .btn-header {
@@ -83,7 +81,7 @@
         }
 
         .receipt-item {
-            font-size: 18px; /* Fallback untuk HP Lama */
+            font-size: 18px; 
             font-size: clamp(1rem, 2.5vh, 1.5rem);
             color: var(--text-muted); border-bottom: 1px dashed #e2e8f0; padding: 4px 0;
         }
@@ -95,7 +93,7 @@
 
         .total-label { display: block; font-size: 12px; color: var(--text-muted); }
         #main-display { 
-            font-size: 40px; /* Fallback */
+            font-size: 40px;
             font-size: clamp(2.5rem, 6vh, 4rem); 
             font-weight: 800; color: var(--text-main); line-height: 1; 
         }
@@ -111,7 +109,7 @@
         
         #pay-total { font-size: 24px; font-weight: bold; }
         #pay-input-display { 
-            font-size: 40px; /* Fallback */
+            font-size: 40px;
             font-size: clamp(2.5rem, 7vh, 4rem); font-weight: 800; text-align: right; border-bottom: 3px solid #2563eb; 
         }
         #pay-change-display {
@@ -121,7 +119,7 @@
         /* KEYPAD */
         .keypad-container {
             grid-area: keypad; padding: 5px; display: grid; 
-            gap: 4px; grid-gap: 4px; /* Support lama */
+            gap: 4px; grid-gap: 4px;
             background-color: var(--bg-color);
             height: 100%; overflow-y: auto;
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr);
@@ -134,7 +132,7 @@
 
         button {
             border: none; border-radius: 6px; 
-            font-size: 24px; /* Fallback */
+            font-size: 24px;
             font-size: clamp(1.5rem, 4vh, 2.5rem); 
             font-weight: bold; cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
             box-shadow: 0 2px 0 #cbd5e1; display: flex; align-items: center; justify-content: center;
@@ -150,9 +148,6 @@
         .btn-clear { background-color: var(--btn-clear-bg); color: white; font-size: 20px; }
         .btn-pay { background-color: var(--btn-action-bg); color: white; font-size: 16px; text-transform: uppercase; }
         .btn-eq { background-color: #2563eb; color: white; }
-
-        /* Helpers */
-        .sw-status { display: none; }
     </style>
 </head>
 <body id="body-app">
@@ -218,27 +213,29 @@
     </div>
 
     <script>
-        // --- SETUP DASAR ---
-        const manifestData={"name":"Kasir Pedagang Pro","short_name":"Kasir Pro","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
-        
-        // Perbaikan: Cek elemen sebelum set attribute untuk mencegah error
-        const manifestEl = document.getElementById('manifest-placeholder');
-        if (manifestEl) {
-            manifestEl.setAttribute('href',URL.createObjectURL(new Blob([JSON.stringify(manifestData)],{type:'application/json'})));
-        }
+        // --- 1. DEKLARASI VARIABEL GLOBAL (FIX ReferenceError) ---
+        var printerDevice = null;
+        var printerCharacteristic = null;
+        var expression = ""; 
+        var totalBill = 0; 
+        var paymentInput = ""; 
+        var isPaymentMode = false; 
+        var isSoundOn = true;
+        var inputHistory = []; 
+        var lastTap = 0;
+        var audioCtx = null;
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
-        async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
-        
-        function attemptFullScreen() { if(!document.fullscreenElement && document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen().catch(()=>{}); } }
-        document.body.addEventListener('click', attemptFullScreen); document.body.addEventListener('touchstart', attemptFullScreen);
-
-        if('serviceWorker' in navigator){ window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(err=>{}); }); }
-
-        // --- VARIABEL & LOGIC ---
-        let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
-        let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
+        // --- 2. CEK ENVIRONMENT (FIX SecurityError) ---
+        window.onload = function() {
+            // Cek apakah di dalam iframe
+            if (window.self !== window.top) {
+                alert("PERINGATAN: Aplikasi berjalan di dalam mode terbatas (Iframe/WebView).\n\nBluetooth tidak akan berfungsi.\n\nSOLUSI: Buka di Google Chrome > ketik alamat web/file langsung di address bar.");
+            }
+            // Register SW
+            if('serviceWorker' in navigator){ 
+                navigator.serviceWorker.register('service-worker.js').catch(err=>{}); 
+            }
+        };
 
         const receiptList = document.getElementById('receipt-list');
         const mainDisplay = document.getElementById('main-display'); 
@@ -281,15 +278,15 @@
         // --- CORE FUNCTIONS ---
         function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
         
-        function initAudio() { if(!window.audioCtx && (window.AudioContext||window.webkitAudioContext)) window.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+        function initAudio() { if(!audioCtx && (window.AudioContext||window.webkitAudioContext)) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
         function playClickSound() {
-            if(!isSoundOn) return; initAudio(); if(!window.audioCtx) return;
-            if(window.audioCtx.state === 'suspended') window.audioCtx.resume();
-            const osc = window.audioCtx.createOscillator(); const g = window.audioCtx.createGain();
-            osc.connect(g); g.connect(window.audioCtx.destination);
-            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, window.audioCtx.currentTime);
-            g.gain.setValueAtTime(0.05, window.audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, window.audioCtx.currentTime+0.05);
-            osc.start(); osc.stop(window.audioCtx.currentTime+0.05);
+            if(!isSoundOn) return; initAudio(); if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.05);
+            osc.start(); osc.stop(audioCtx.currentTime+0.05);
         }
         function toggleSound() { isSoundOn = !isSoundOn; btnSound.innerHTML = isSoundOn ? '🔊<br>Suara' : '🔇<br>Mute'; if(isSoundOn) playClickSound(); }
         document.getElementById('keypad').addEventListener('click', (e) => { if(e.target.closest('button')) playClickSound(); });
@@ -340,7 +337,7 @@
         }
         function appendOp(op) {
             if(isPaymentMode || expression==="") return;
-            if(op === '+') { // Hitung subtotal visual
+            if(op === '+') { 
                  const lastChar = expression.slice(-1);
                  if (!['+', '-', '*', '/'].includes(lastChar)) { try { eval(expression); } catch(e) {} }
             }
@@ -396,7 +393,6 @@
                 if (!printerCharacteristic) {
                     if(confirm("Printer belum terhubung. Hubungkan sekarang?")) await connectBluetooth();
                 }
-                
                 if (printerCharacteristic) {
                     saveHistory(totalBill, pay, change);
                     await printReceipt(totalBill, pay, change);
@@ -424,21 +420,30 @@
             alert(msg);
         }
 
-        // --- BLUETOOTH (MANUAL ENCODER & CHUNKING FOR OLD DEVICE) ---
+        // --- BLUETOOTH (SIMPLE STABLE VERSION) ---
         async function connectBluetooth() {
+            // Cek dukungan Browser
             if (!navigator.bluetooth) {
-                alert("Browser ini tidak mendukung koneksi Bluetooth langsung.\nHarap update Google Chrome ke versi terbaru (versi 56+).");
+                alert("Browser ini tidak mendukung Bluetooth. Gunakan Google Chrome versi terbaru.");
                 return;
             }
+
             try {
                 printerDevice = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
                 const server = await printerDevice.gatt.connect();
-                // Delay penting untuk HP lama
-                await new Promise(r => setTimeout(r, 500));
+                // Delay 500ms untuk kestabilan koneksi di Android
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 printerCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                btnBt.innerHTML = '🟢<br>Ready'; btnBt.style.backgroundColor = "#059669";
-            } catch (e) { alert("Gagal Konek: " + e); btnBt.innerHTML = '🖨️<br>Connect'; btnBt.style.backgroundColor = "#475569"; }
+                
+                btnBt.innerHTML = '🟢<br>Ready'; 
+                btnBt.style.backgroundColor = "#059669";
+            } catch (e) { 
+                alert("Gagal Konek: " + e); 
+                btnBt.innerHTML = '🖨️<br>Connect'; 
+                btnBt.style.backgroundColor = "#475569"; 
+            }
         }
 
         // Helper untuk encode string ke Uint8Array tanpa TextEncoder (untuk browser jadul)
@@ -446,7 +451,6 @@
             const bytes = [];
             for (let i = 0; i < str.length; i++) {
                 let code = str.charCodeAt(i);
-                // Ganti karakter non-ASCII dengan ? agar tidak error
                 if (code > 255) code = 63; 
                 bytes.push(code);
             }
@@ -528,8 +532,11 @@
                 }
             } catch (error) { alert("Gagal mencetak: " + error); }
         }
+
+        // --- PWA INSTALL APP ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
+        async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
     </script>
-</body>
-</html>
 </body>
 </html>
