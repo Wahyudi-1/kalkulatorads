@@ -295,14 +295,31 @@
         // --- KEYBOARD & MOUSE ---
         document.addEventListener('keydown', (event) => {
             const key = event.key;
-            if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape'].includes(key)) event.preventDefault();
-            if (!document.body.classList.contains('external-keyboard-mode')) document.body.classList.add('external-keyboard-mode');
-            if (!isNaN(key) && key !== ' ') appendNum(key);
-            else if (['+', '-', '*', '/'].includes(key)) appendOp(key);
-            else if (key === 'Enter') handleMainAction();
-            else if (key === 'Backspace') backspace();
-            else if (key === 'Escape') clearAll();
-            else if (key === 'z' && (event.ctrlKey || event.metaKey)) undoLastAction();
+            
+            // Cegah aksi default browser untuk tombol kalkulator (seperti scroll)
+            if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape', '='].includes(key)) event.preventDefault();
+
+            // Aktifkan mode keyboard eksternal otomatis
+            if (!document.body.classList.contains('external-keyboard-mode')) {
+                document.body.classList.add('external-keyboard-mode');
+            }
+
+            if (!isNaN(key) && key !== ' ') {
+                appendNum(key);
+            } else if (['+', '-', '*', '/'].includes(key)) {
+                appendOp(key);
+            } else if (key === 'Enter' || key === '=') {
+                // LOGIKA ENTER:
+                // 1. Mode Hitung -> Pindah ke Bayar
+                // 2. Mode Bayar -> Cetak Struk
+                handleMainAction();
+            } else if (key === 'Backspace') {
+                backspace();
+            } else if (key === 'Escape') {
+                clearAll();
+            } else if (key === 'z' && (event.ctrlKey || event.metaKey)) {
+                undoLastAction();
+            }
         });
 
         document.addEventListener('mousedown', (e) => {
@@ -342,6 +359,7 @@
                 if (!expression) {
                     receiptList.innerHTML = '<div class="receipt-item active">0</div>'; mainDisplay.innerText = "0";
                 } else {
+                    // Split berdasarkan + dan - untuk baris baru
                     let parts = expression.split(/([+\-])/);
                     let html = '';
                     
@@ -409,10 +427,7 @@
         }
         function appendOp(op) {
             if(isPaymentMode || expression==="") return;
-            if(op === '+') { 
-                 const lastChar = expression.slice(-1);
-                 if (!['+', '-', '*', '/'].includes(lastChar)) { try { eval(expression); } catch(e) {} }
-            }
+            // Tidak ada hitung otomatis (collapse) agar list barang terjaga
             saveState();
             if(['+','-','*','/'].includes(expression.slice(-1))) expression = expression.slice(0,-1)+op;
             else expression+=op;
@@ -492,12 +507,14 @@
             alert(msg);
         }
 
+        // --- BLUETOOTH (SIMPLE STABLE VERSION) ---
         async function connectBluetooth() {
             if (!navigator.bluetooth) {
                 alert("Browser ini tidak mendukung koneksi Bluetooth langsung.\nHarap update Google Chrome ke versi terbaru (versi 56+).");
                 return;
             }
             try {
+                // Disconnect jika sudah terhubung untuk mereset status
                 if (printerDevice && printerDevice.gatt.connected) {
                     printerDevice.gatt.disconnect();
                 }
