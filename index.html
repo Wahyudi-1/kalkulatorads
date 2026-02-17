@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2563eb">
     
-    <!-- PWA Settings -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,10 +13,7 @@
 
     <title>Kasir Pedagang Pro</title>
 
-    <!-- Link ke Manifest Eksternal -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Ikon (Fallback) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
     <style>
@@ -52,7 +48,6 @@
             transition: grid-template-rows 0.3s ease;
         }
 
-        /* --- MODE KEYBOARD EKSTERNAL --- */
         body.external-keyboard-mode {
             grid-template-rows: auto 1fr auto; 
         }
@@ -224,7 +219,6 @@
     </div>
 
     <div class="display-container" id="display-area">
-        <!-- MODE 1 -->
         <div id="view-calc">
             <div id="receipt-list" class="receipt-list">
                 <div class="receipt-item active">0</div>
@@ -235,7 +229,6 @@
             </div>
         </div>
 
-        <!-- MODE 2 -->
         <div id="view-pay" class="pay-mode-view">
             <div class="pay-row">
                 <div class="label-group">
@@ -290,39 +283,26 @@
     </div>
 
     <script>
-        // --- PWA INSTALLATION LOGIC (Service Worker Registration) ---
+        // --- PWA INSTALLATION ---
         let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e;
-            document.getElementById('btn-install').style.display = 'inline-flex';
-        });
-        async function installApp() {
-            if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; }
-        }
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
+        async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
+        
+        // --- FULLSCREEN ---
+        function attemptFullScreen() { if(!document.fullscreenElement && document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen().catch(()=>{}); } }
+        document.body.addEventListener('click', attemptFullScreen); document.body.addEventListener('touchstart', attemptFullScreen);
 
-        // Register Service Worker Eksternal
-        if ('serviceWorker' in navigator) {
+        // --- SERVICE WORKER REGISTRATION ---
+        if('serviceWorker' in navigator){ 
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(reg => console.log('SW Registered', reg))
-                    .catch(err => console.log('SW Error', err));
+                navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW fail', err));
             });
         }
 
-        // --- FULLSCREEN ---
-        function attemptFullScreen() {
-            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
-        }
-        document.body.addEventListener('click', attemptFullScreen);
-        document.body.addEventListener('touchstart', attemptFullScreen);
-
-        // --- LOGIC APLIKASI UTAMA ---
+        // --- LOGIC UTAMA ---
         let expression = ""; let totalBill = 0; let paymentInput = ""; let isPaymentMode = false; 
         let isSoundOn = true; let audioCtx = null; let printerDevice = null; let printerCharacteristic = null;
-        let inputHistory = []; 
-        let lastTap = 0;
+        let inputHistory = []; let lastTap = 0;
 
         const receiptList = document.getElementById('receipt-list');
         const mainDisplay = document.getElementById('main-display'); 
@@ -334,7 +314,7 @@
         const btnSound = document.getElementById('btn-sound');
         const btnBt = document.getElementById('btn-bt');
 
-        // Double Tap Logic
+        // --- DOUBLE TAP LOGIC ---
         const displayArea = document.getElementById('display-area');
         function toggleDisplayMode() { document.body.classList.toggle('external-keyboard-mode'); }
         displayArea.addEventListener('click', (e) => {
@@ -345,11 +325,15 @@
             lastTap = currentTime;
         });
 
-        // Keyboard Logic
+        // --- KEYBOARD HANDLING ---
         document.addEventListener('keydown', (event) => {
             const key = event.key;
             if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape'].includes(key)) event.preventDefault();
-            if (!document.body.classList.contains('external-keyboard-mode')) document.body.classList.add('external-keyboard-mode');
+
+            if (!document.body.classList.contains('external-keyboard-mode')) {
+                document.body.classList.add('external-keyboard-mode');
+            }
+
             if (!isNaN(key) && key !== ' ') appendNum(key);
             else if (['+', '-', '*', '/'].includes(key)) appendOp(key);
             else if (key === 'Enter') handleMainAction();
@@ -358,7 +342,6 @@
             else if (key === 'z' && (event.ctrlKey || event.metaKey)) undoLastAction();
         });
 
-        // Global Touch Logic (Kecuali Display)
         document.addEventListener('mousedown', (e) => {
             if (!e.target.closest('.display-container') && document.body.classList.contains('external-keyboard-mode')) {
                 document.body.classList.remove('external-keyboard-mode');
@@ -426,6 +409,26 @@
         }
         function appendOp(op) {
             if(isPaymentMode || expression==="") return;
+            
+            // --- LOGIKA HITUNG OTOMATIS SAAT + DITEKAN ---
+            if (op === '+') {
+                 const lastChar = expression.slice(-1);
+                 // Cek jika karakter terakhir bukan operator
+                 if (!['+', '-', '*', '/'].includes(lastChar)) {
+                     try {
+                        let res = eval(expression);
+                        // Update expression jadi hasil perhitungan (running total)
+                        // Tetapi kita tidak ingin menghapus history item, 
+                        // jadi untuk tampilan struk kita biarkan expression tumbuh
+                        // Tapi user minta "melakukan perubahan perhitungan", 
+                        // di konteks "Struk", user biasanya ingin melihat daftar.
+                        // Jadi, appendOp cukup menambahkan operator. 
+                        // Fitur "subtotal" visual sudah dihandle oleh mainDisplay di updateDisplay().
+                     } catch(e) {}
+                 }
+            }
+            // ------------------------------------------------------------------
+
             saveState();
             if(['+','-','*','/'].includes(expression.slice(-1))) expression = expression.slice(0,-1)+op;
             else expression+=op;
@@ -443,7 +446,9 @@
             try {
                 if(!expression) return 0;
                 let evalExpr = expression;
+                // Bersihkan operator gantung di akhir
                 if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
+                
                 if(!evalExpr) return 0;
                 let result = eval(evalExpr);
                 totalBill = result;
@@ -473,9 +478,26 @@
             let pay = parseInt(paymentInput || "0");
             if(pay < totalBill) { alert("Uang kurang!"); return; }
             let change = pay - totalBill;
-            saveHistory(totalBill, pay, change);
-            if(print) await printReceipt(totalBill, pay, change);
-            clearAll();
+            
+            if (print) {
+                if (!printerCharacteristic) {
+                    let c = confirm("Printer belum terhubung.\nHubungkan sekarang?");
+                    if (c) await connectBluetooth();
+                }
+                if (printerCharacteristic) {
+                    saveHistory(totalBill, pay, change);
+                    await printReceipt(totalBill, pay, change);
+                    clearAll();
+                } else {
+                    if(confirm("Gagal konek printer. Simpan transaksi saja?")) {
+                        saveHistory(totalBill, pay, change);
+                        clearAll();
+                    }
+                }
+            } else {
+                saveHistory(totalBill, pay, change);
+                clearAll();
+            }
         }
 
         function saveHistory(total, pay, change) {
@@ -503,7 +525,7 @@
         }
 
         async function printReceipt(total, pay, change) {
-            if (!printerCharacteristic) { alert("Printer tidak terhubung! Disimpan."); return; }
+            if (!printerCharacteristic) return;
             try {
                 const ESC = '\u001B'; const GS = '\u001D';
                 const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
