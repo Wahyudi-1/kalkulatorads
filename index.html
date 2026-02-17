@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- PWA Settings -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
+    <meta name="application-name" content="Kasir Pro">
+
+    <title>Kasir Pedagang Pro</title>
+
+    <!-- Link ke Manifest Eksternal -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Ikon (Fallback) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        :root {
+            --bg-color: #f1f5f9;
+            --screen-bg: #ffffff;
+            --btn-num-bg: #ffffff;
+            --btn-op-bg: #dbeafe;
+            --btn-action-bg: #2563eb;
+            --btn-print-bg: #ea580c;
+            --btn-save-bg: #059669;
+            --btn-clear-bg: #dc2626;
+            --btn-tool-bg: #475569;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 40vh 1fr; 
+            grid-template-areas: "toolbar" "display" "keypad";
+            transition: grid-template-rows 0.3s ease;
+        }
+
+        /* --- MODE KEYBOARD EKSTERNAL --- */
+        body.external-keyboard-mode {
+            grid-template-rows: auto 1fr auto; 
+        }
+
+        @media (orientation: landscape) {
+            body {
+                grid-template-columns: 40% 60%;
+                grid-template-rows: auto 1fr;
+                grid-template-areas: "toolbar keypad" "display keypad";
+            }
+            body.external-keyboard-mode {
+                grid-template-columns: 70% 30%; 
+            }
+        }
+
+        .toolbar {
+            grid-area: toolbar;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #e2e8f0;
+            z-index: 5;
+            min-height: 0;
+            padding: 5px;
+            gap: 10px;
+        }
+        
+        .btn-header {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #btn-install { display: none; } 
+
+        .display-container {
+            grid-area: display;
+            background: var(--screen-bg);
+            padding: 10px 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            cursor: pointer; 
+        }
+
+        #view-calc { display: flex; flex-direction: column; height: 100%; justify-content: space-between; }
+
+        .receipt-list {
+            flex: 1;
+            overflow-y: auto;
+            text-align: right;
+            padding-right: 5px;
+            margin-bottom: 5px;
+            scrollbar-width: thin;
+            scroll-behavior: smooth;
+        }
+        .receipt-list::-webkit-scrollbar { width: 6px; }
+        .receipt-list::-webkit-scrollbar-track { background: transparent; }
+        .receipt-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+        .receipt-item {
+            font-size: clamp(1.1rem, 2.5vh, 1.6rem);
+            color: var(--text-muted);
+            line-height: 1.4;
+            border-bottom: 1px dashed #e2e8f0;
+            padding: 2px 0;
+        }
+        .receipt-item.active { color: var(--text-main); font-weight: 600; border-bottom: none; }
+
+        .live-total-box {
+            background: #f8fafc;
+            border-top: 2px solid #2563eb;
+            padding: 8px 0 0 0;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .total-label { display: block; font-size: 0.9rem; color: var(--text-muted); margin-bottom: -2px; }
+        #main-display { font-size: clamp(2.5rem, 6vh, 3.5rem); font-weight: 800; color: var(--text-main); word-wrap: break-word; line-height: 1.1; }
+
+        .pay-mode-view { display: none; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px 0; }
+        .pay-row { display: flex; justify-content: space-between; align-items: center; }
+        .label-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .label-pay { font-size: clamp(0.9rem, 2vh, 1.2rem); color: var(--text-muted); font-weight: 600; }
+        .btn-edit-total {
+            background: #f59e0b; border: none; border-radius: 4px; color: white; padding: 4px 10px;
+            font-size: clamp(0.7rem, 1.5vh, 0.9rem); cursor: pointer; font-weight: bold;
+        }
+        #pay-total { font-size: clamp(1.5rem, 4vh, 2rem); color: #1e293b; font-weight: 800; text-align: right;}
+        #pay-input-display { 
+            font-size: clamp(2.5rem, 7vh, 4.5rem); color: var(--text-main); font-weight: 800; 
+            text-align: right; border-bottom: 3px solid #2563eb; margin: 5px 0;
+        }
+        #pay-change-display {
+            font-size: clamp(1.2rem, 3.5vh, 2.2rem); font-weight: bold; text-align: right; color: var(--btn-save-bg);
+            word-break: break-word; max-width: 65%; line-height: 1.1;
+        }
+
+        .keypad-container {
+            grid-area: keypad;
+            padding: 5px;
+            display: grid;
+            gap: 4px;
+            background-color: var(--bg-color);
+            height: 100%;
+            overflow-y: auto;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+        }
+
+        body.external-keyboard-mode .keypad-container {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 80px); 
+            align-content: end; 
+            height: auto; 
+            padding-top: 0;
+        }
+
+        button {
+            border: none; border-radius: 8px; font-size: clamp(1.5rem, 4vh, 2.5rem); font-weight: 700;
+            cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
+            box-shadow: 0 2px 0 #cbd5e1; transition: opacity 0.1s;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+            user-select: none; width: 100%; height: 100%;
+        }
+        button:active { opacity: 0.7; transform: scale(0.98); }
+
+        body.external-keyboard-mode .virtual-key { display: none !important; }
+
+        .btn-tool {
+            background-color: var(--btn-tool-bg); color: white;
+            font-size: clamp(1rem, 2.5vh, 1.2rem);
+            display: flex; flex-direction: column; gap: 2px; font-weight: 600;
+        }
+        .btn-undo { background-color: #f59e0b; color: white; font-size: clamp(1rem, 2.5vh, 1.2rem); flex-direction: column; }
+        .btn-op { background-color: var(--btn-op-bg); color: #1e3a8a; font-size: clamp(2rem, 5vh, 3rem); }
+        .btn-clear { background-color: var(--btn-clear-bg); color: white; font-size: clamp(1.2rem, 3vh, 1.8rem); }
+        .btn-zero-xx { background-color: #fffbeb; color: #92400e; font-size: clamp(1.2rem, 3vh, 1.8rem); font-weight: 800; }
+        .btn-backspace { background-color: var(--btn-op-bg); color: #1e3a8a; font-size: clamp(2rem, 4vh, 2.5rem); }
+        .btn-pay {
+            background-color: var(--btn-action-bg); color: white;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            font-size: clamp(0.8rem, 2vh, 1.2rem); font-weight: 800;
+        }
+        .btn-eq { background-color: #2563eb; color: white; font-size: clamp(2rem, 5vh, 3rem); }
+
+        body.mode-payment .btn-op { opacity: 0.2; pointer-events: none; }
+        body.mode-payment .btn-backspace { opacity: 1; pointer-events: auto; }
+        body.mode-payment .btn-clear { opacity: 1; pointer-events: auto; }
+        body.mode-payment .btn-undo { opacity: 0.2; pointer-events: none; }
+        body.mode-payment .btn-eq { background-color: var(--btn-save-bg); font-size: clamp(1rem, 3vh, 1.5rem); }
+        body.mode-payment .btn-pay { background-color: var(--btn-print-bg); }
+    </style>
+</head>
+<body id="body-app">
+
+    <div class="toolbar" id="toolbar-area">
+        <button class="btn-header" id="btn-install" onclick="installApp()">📲 Install App</button>
+    </div>
+
+    <div class="display-container" id="display-area">
+        <!-- MODE 1 -->
+        <div id="view-calc">
+            <div id="receipt-list" class="receipt-list">
+                <div class="receipt-item active">0</div>
+            </div>
+            <div class="live-total-box">
+                <span class="total-label">Total Belanja:</span>
+                <span id="main-display">0</span>
+            </div>
+        </div>
+
+        <!-- MODE 2 -->
+        <div id="view-pay" class="pay-mode-view">
+            <div class="pay-row">
+                <div class="label-group">
+                    <span class="label-pay">TOTAL AKHIR</span>
+                    <button class="btn-edit-total" onclick="editTransaction()">✏️ UBAH</button>
+                </div>
+                <span id="pay-total">Rp 0</span>
+            </div>
+            
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+                <div style="text-align:right; font-size:0.9rem; color:#64748b;">Uang Pelanggan:</div>
+                <div id="pay-input-display">0</div>
+            </div>
+
+            <div class="pay-row">
+                <span class="label-pay">KEMBALI</span>
+                <span id="pay-change-display">Rp 0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="keypad-container" id="keypad">
+        <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<span style="font-size:0.6em">Suara</span></button>
+        <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<span style="font-size:0.6em">Connect</span></button>
+        <button class="btn-tool" onclick="showHistory()">📜<span style="font-size:0.6em">Riwayat</span></button>
+        <button class="btn-undo" onclick="undoLastAction()">↩️<span style="font-size:0.6em">Batal</span></button>
+        <button class="btn-clear" onclick="clearAll()">AC</button>
+        <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
+
+        <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
+        <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
+
+        <button onclick="appendNum('7')" class="virtual-key">7</button>
+        <button onclick="appendNum('8')" class="virtual-key">8</button>
+        <button onclick="appendNum('9')" class="virtual-key">9</button>
+        <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
+
+        <button onclick="appendNum('4')" class="virtual-key">4</button>
+        <button onclick="appendNum('5')" class="virtual-key">5</button>
+        <button onclick="appendNum('6')" class="virtual-key">6</button>
+        <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
+
+        <button onclick="appendNum('1')" class="virtual-key">1</button>
+        <button onclick="appendNum('2')" class="virtual-key">2</button>
+        <button onclick="appendNum('3')" class="virtual-key">3</button>
+        <button class="btn-op virtual-key" onclick="appendOp('+')">+</button>
+
+        <button onclick="appendNum('0')" class="virtual-key">0</button>
+        <button class="btn-zero-xx virtual-key" onclick="appendNum('00')">00</button>
+        <button class="btn-zero-xx virtual-key" onclick="appendNum('000')">000</button>
+        <button id="btn-eq" class="btn-eq virtual-key" onclick="handleEqual()">=</button>
+    </div>
+
+    <script>
+        // --- PWA INSTALLATION LOGIC (Service Worker Registration) ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e;
+            document.getElementById('btn-install').style.display = 'inline-flex';
+        });
+        async function installApp() {
+            if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; }
+        }
+
+        // Register Service Worker Eksternal
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.log('SW Error', err));
+            });
+        }
+
+        // --- FULLSCREEN ---
+        function attemptFullScreen() {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+        document.body.addEventListener('click', attemptFullScreen);
+        document.body.addEventListener('touchstart', attemptFullScreen);
+
+        // --- LOGIC APLIKASI UTAMA ---
+        let expression = ""; let totalBill = 0; let paymentInput = ""; let isPaymentMode = false; 
+        let isSoundOn = true; let audioCtx = null; let printerDevice = null; let printerCharacteristic = null;
+        let inputHistory = []; 
+        let lastTap = 0;
+
+        const receiptList = document.getElementById('receipt-list');
+        const mainDisplay = document.getElementById('main-display'); 
+        const payTotalDisplay = document.getElementById('pay-total');
+        const payInputDisplay = document.getElementById('pay-input-display');
+        const payChangeDisplay = document.getElementById('pay-change-display');
+        const btnEq = document.getElementById('btn-eq');
+        const btnMain = document.getElementById('btn-main-action');
+        const btnSound = document.getElementById('btn-sound');
+        const btnBt = document.getElementById('btn-bt');
+
+        // Double Tap Logic
+        const displayArea = document.getElementById('display-area');
+        function toggleDisplayMode() { document.body.classList.toggle('external-keyboard-mode'); }
+        displayArea.addEventListener('click', (e) => {
+            const currentTime = new Date().getTime();
+            if ((currentTime - lastTap) < 300 && (currentTime - lastTap) > 0) {
+                e.preventDefault(); toggleDisplayMode();
+            } 
+            lastTap = currentTime;
+        });
+
+        // Keyboard Logic
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape'].includes(key)) event.preventDefault();
+            if (!document.body.classList.contains('external-keyboard-mode')) document.body.classList.add('external-keyboard-mode');
+            if (!isNaN(key) && key !== ' ') appendNum(key);
+            else if (['+', '-', '*', '/'].includes(key)) appendOp(key);
+            else if (key === 'Enter') handleMainAction();
+            else if (key === 'Backspace') backspace();
+            else if (key === 'Escape') clearAll();
+            else if (key === 'z' && (event.ctrlKey || event.metaKey)) undoLastAction();
+        });
+
+        // Global Touch Logic (Kecuali Display)
+        document.addEventListener('mousedown', (e) => {
+            if (!e.target.closest('.display-container') && document.body.classList.contains('external-keyboard-mode')) {
+                document.body.classList.remove('external-keyboard-mode');
+            }
+        });
+
+        function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
+        function initAudio() { if(!audioCtx && (window.AudioContext||window.webkitAudioContext)) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+        function playClickSound() {
+            if(!isSoundOn) return; initAudio(); if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.05);
+            osc.start(); osc.stop(audioCtx.currentTime+0.05);
+        }
+        function toggleSound() { isSoundOn = !isSoundOn; btnSound.innerHTML = isSoundOn ? '🔊<span style="font-size:0.6em">Suara</span>' : '🔇<span style="font-size:0.6em">Mute</span>'; if(isSoundOn) playClickSound(); }
+        document.getElementById('keypad').addEventListener('click', (e) => { if(e.target.closest('button')) playClickSound(); });
+
+        function saveState() { if(inputHistory.length > 20) inputHistory.shift(); inputHistory.push(expression); }
+        function undoLastAction() { if(isPaymentMode) return; if(inputHistory.length>0){ expression = inputHistory.pop(); updateDisplay(); } }
+
+        function updateDisplay() {
+            if (!isPaymentMode) {
+                if (!expression) {
+                    receiptList.innerHTML = '<div class="receipt-item active">0</div>';
+                    mainDisplay.innerText = "0";
+                } else {
+                    let visualExp = expression.replace(/\*/g, '×').replace(/\//g, '÷').replace(/\-/g, ' -');
+                    let items = visualExp.split('+');
+                    let html = '';
+                    items.forEach((item, index) => {
+                        let formattedItem = item.replace(/\d+/g, (n) => parseInt(n).toLocaleString('id-ID'));
+                        let prefix = (index > 0) ? '+ ' : '';
+                        let activeClass = (index === items.length - 1) ? 'active' : '';
+                        html += `<div class="receipt-item ${activeClass}">${prefix}${formattedItem}</div>`;
+                    });
+                    receiptList.innerHTML = html;
+                    try {
+                        let evalExpr = expression;
+                        if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
+                        if(evalExpr) mainDisplay.innerText = eval(evalExpr).toLocaleString('id-ID');
+                    } catch (e) { }
+                }
+                scrollToBottom();
+            } else {
+                let val = parseInt(paymentInput || "0");
+                payInputDisplay.innerText = val.toLocaleString('id-ID');
+                let change = val - totalBill;
+                if (change >= 0) {
+                    payChangeDisplay.innerText = "Rp " + change.toLocaleString('id-ID');
+                    payChangeDisplay.style.color = "#059669";
+                } else {
+                    payChangeDisplay.innerText = "Kurang Rp " + Math.abs(change).toLocaleString('id-ID');
+                    payChangeDisplay.style.color = "#dc2626";
+                }
+            }
+        }
+
+        function appendNum(num) {
+            if(!isPaymentMode) { saveState(); if(expression==="0" && num!==".") expression=""; expression+=num; }
+            else { if(paymentInput.length>12) return; paymentInput+=num; }
+            updateDisplay();
+        }
+        function appendOp(op) {
+            if(isPaymentMode || expression==="") return;
+            saveState();
+            if(['+','-','*','/'].includes(expression.slice(-1))) expression = expression.slice(0,-1)+op;
+            else expression+=op;
+            updateDisplay();
+        }
+        function backspace() {
+            if(!isPaymentMode) { saveState(); expression = expression.slice(0,-1); if(expression==="") expression="0"; }
+            else paymentInput = paymentInput.slice(0,-1);
+            updateDisplay();
+        }
+        function clearAll() { if(!isPaymentMode) saveState(); expression=""; paymentInput=""; totalBill=0; isPaymentMode=false; switchModeUI(false); updateDisplay(); }
+        function editTransaction() { isPaymentMode=false; paymentInput=""; switchModeUI(false); }
+
+        function calculate() {
+            try {
+                if(!expression) return 0;
+                let evalExpr = expression;
+                if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
+                if(!evalExpr) return 0;
+                let result = eval(evalExpr);
+                totalBill = result;
+                mainDisplay.innerText = result.toLocaleString('id-ID');
+                return result;
+            } catch(e) { return 0; }
+        }
+
+        function handleEqual() { if(!isPaymentMode) calculate(); else finishTransaction(false); }
+        function handleMainAction() {
+            if(!isPaymentMode) {
+                let total = calculate();
+                if(total <= 0) { alert("Total 0 atau Error."); return; }
+                totalBill = total; paymentInput=""; isPaymentMode=true;
+                payTotalDisplay.innerText = "Rp " + totalBill.toLocaleString('id-ID');
+                switchModeUI(true); updateDisplay();
+            } else finishTransaction(true);
+        }
+
+        function switchModeUI(isPay) {
+            const vCalc = document.getElementById('view-calc'); const vPay = document.getElementById('view-pay');
+            if(isPay) { vCalc.style.display='none'; vPay.style.display='flex'; document.body.classList.add('mode-payment'); btnEq.innerText="💾 SIMPAN"; btnMain.innerText="🖨️ CETAK"; }
+            else { vCalc.style.display='flex'; vPay.style.display='none'; document.body.classList.remove('mode-payment'); btnEq.innerText="="; btnMain.innerText="BAYAR"; }
+        }
+
+        async function finishTransaction(print) {
+            let pay = parseInt(paymentInput || "0");
+            if(pay < totalBill) { alert("Uang kurang!"); return; }
+            let change = pay - totalBill;
+            saveHistory(totalBill, pay, change);
+            if(print) await printReceipt(totalBill, pay, change);
+            clearAll();
+        }
+
+        function saveHistory(total, pay, change) {
+            let history = JSON.parse(localStorage.getItem('tx_history')) || [];
+            history.unshift({ date: new Date().toLocaleString('id-ID'), total: total, pay: pay, change: change });
+            if(history.length > 50) history.pop();
+            localStorage.setItem('tx_history', JSON.stringify(history));
+        }
+
+        function showHistory() {
+            let h = JSON.parse(localStorage.getItem('tx_history')) || [];
+            if(h.length === 0) { alert("Belum ada riwayat."); return; }
+            let msg = h.map(x => `📅 ${x.date}\n💰 Total: ${x.total.toLocaleString()}\n💵 Bayar: ${x.pay.toLocaleString()}\n✅ Kembali: ${x.change.toLocaleString()}\n-----------------`).join('\n');
+            alert(msg);
+        }
+
+        async function connectBluetooth() {
+            try {
+                printerDevice = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
+                const server = await printerDevice.gatt.connect();
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                printerCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                btnBt.innerHTML = '🟢<span style="font-size:0.6em">Ready</span>'; btnBt.style.backgroundColor = "#059669";
+            } catch (e) { alert("Gagal Konek: " + e); btnBt.innerHTML = '🖨️<span style="font-size:0.6em">Connect</span>'; btnBt.style.backgroundColor = "#475569"; }
+        }
+
+        async function printReceipt(total, pay, change) {
+            if (!printerCharacteristic) { alert("Printer tidak terhubung! Disimpan."); return; }
+            try {
+                const ESC = '\u001B'; const GS = '\u001D';
+                const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
+                const boldOn = ESC + 'E' + '\u0001'; const boldOff = ESC + 'E' + '\u0000';
+                const bigFont = GS + '!' + '\u0011'; const normalFont = GS + '!' + '\u0000';
+                
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('id-ID');
+                const timeStr = now.toLocaleTimeString('id-ID');
+
+                let evalExpr = expression;
+                if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
+                let items = evalExpr.split('+');
+                let itemsOutput = "";
+                let itemCount = 0;
+                
+                items.forEach((item, index) => {
+                    let cleanItem = item.trim();
+                    if(!cleanItem) return;
+                    itemCount++;
+                    let qty = 1; let price = 0;
+                    if(cleanItem.includes('*')) {
+                        let parts = cleanItem.split('*');
+                        let v1 = parseInt(parts[0]); let v2 = parseInt(parts[1]);
+                        if(!isNaN(v1) && !isNaN(v2)) { price = Math.max(v1, v2); qty = Math.min(v1, v2); }
+                    } else { try { price = parseInt(eval(cleanItem)); } catch(e) { } }
+                    
+                    if(price) itemsOutput += `Barang ${index + 1} : ${qty} x Rp ${price.toLocaleString('id-ID')}\n`;
+                    else itemsOutput += `Barang ${index + 1} : Error\n`;
+                });
+
+                let summaryLine = `Jumlah Jenis Barang ${itemCount}\n`;
+
+                let receiptText = 
+                    center + boldOn + bigFont + "TOKO ADS" + normalFont + boldOff + "\n" +
+                    "0812-3085-078 (WA)\n" +
+                    "Jl. Sukodono No.92 Ganting\n" +
+                    "Kec. Gedangan, Kab. Sidoarjo\n" +
+                    "--------------------------------\n" +
+                    left + 
+                    `Tgl : ${dateStr} ${timeStr}\n` +
+                    "--------------------------------\n" +
+                    itemsOutput + "\n" + summaryLine +
+                    "--------------------------------\n" +
+                    boldOn + 
+                    `TOTAL   : Rp ${total.toLocaleString('id-ID')}\n` +
+                    boldOff +
+                    `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
+                    `KEMBALI : Rp ${change.toLocaleString('id-ID')}\n` +
+                    "--------------------------------\n" +
+                    center + "Terima Kasih\n" +
+                    "Semoga Berkah\n\n\n";
+
+                const encoder = new TextEncoder();
+                const encodedData = encoder.encode(receiptText);
+                const maxChunk = 100;
+                for (let i = 0; i < encodedData.length; i += maxChunk) {
+                    const chunk = encodedData.slice(i, i + maxChunk);
+                    await printerCharacteristic.writeValue(chunk);
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            } catch (error) { alert("Gagal mencetak: " + error); }
+        }
+    </script>
+</body>
+</html>
