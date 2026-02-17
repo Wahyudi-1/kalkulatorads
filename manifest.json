@@ -1,6 +1,6 @@
 {
-  "name": "Kasir Pedagang Pro",
-  "short_name": "Kasir Pro",
+  "name": "Kalkulator ADS",
+  "short_name": "Kalkulator ADS",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
