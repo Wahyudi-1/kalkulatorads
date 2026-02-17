@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kalkulator ADS">
-    <meta name="application-name" content="Kalkulator ADS">
+    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
+    <meta name="application-name" content="Kasir Pro">
 
-    <title>Kalkulator ADS</title>
+    <title>Kasir Pedagang Pro</title>
     <link rel="manifest" id="manifest-placeholder" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
@@ -28,6 +28,7 @@
             --btn-save-bg: #059669;
             --btn-clear-bg: #dc2626;
             --btn-tool-bg: #475569;
+            --btn-rotate-bg: #0f766e;
             --text-main: #1e293b;
             --text-muted: #64748b;
         }
@@ -81,11 +82,14 @@
         }
 
         .receipt-item {
-            font-size: 18px; 
-            font-size: clamp(1rem, 2.5vh, 1.5rem);
-            color: var(--text-muted); border-bottom: 1px dashed #e2e8f0; padding: 4px 0;
+            font-size: 28px; 
+            font-size: clamp(1.6rem, 4vh, 2.2rem); 
+            color: #334155; 
+            font-weight: 600; 
+            border-bottom: 1px dashed #e2e8f0; padding: 6px 0;
+            line-height: 1.3;
         }
-        .receipt-item.active { color: var(--text-main); font-weight: bold; border-bottom: none; }
+        .receipt-item.active { color: var(--text-main); font-weight: 800; border-bottom: none; }
 
         .live-total-box {
             background: #f8fafc; border-top: 2px solid #2563eb; padding: 5px 0; text-align: right;
@@ -126,7 +130,8 @@
         }
 
         body.external-keyboard-mode .keypad-container {
-            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 60px); 
+            grid-template-columns: repeat(4, 1fr); 
+            grid-template-rows: repeat(2, 60px); 
             align-content: end; height: auto; padding-top: 0;
         }
 
@@ -134,7 +139,7 @@
             border: none; border-radius: 6px; 
             font-size: 24px;
             font-size: clamp(1.5rem, 4vh, 2.5rem); 
-            font-weight: bold; cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
+            font-weight: 700; cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
             box-shadow: 0 2px 0 #cbd5e1; display: flex; align-items: center; justify-content: center;
             width: 100%; height: 100%;
         }
@@ -144,10 +149,15 @@
 
         .btn-tool { background-color: var(--btn-tool-bg); color: white; font-size: 14px; flex-direction: column; }
         .btn-undo { background-color: #f59e0b; color: white; font-size: 14px; flex-direction: column; }
+        .btn-rotate { background-color: var(--btn-rotate-bg); color: white; font-size: 14px; flex-direction: column; }
+        
         .btn-op { background-color: var(--btn-op-bg); color: #1e3a8a; }
         .btn-clear { background-color: var(--btn-clear-bg); color: white; font-size: 20px; }
         .btn-pay { background-color: var(--btn-action-bg); color: white; font-size: 16px; text-transform: uppercase; }
         .btn-eq { background-color: #2563eb; color: white; }
+
+        /* Helpers */
+        .sw-status { display: none; }
     </style>
 </head>
 <body id="body-app">
@@ -185,64 +195,90 @@
     </div>
 
     <div class="keypad-container" id="keypad">
+        <!-- BARIS 1 -->
         <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<br>Suara</button>
         <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<br>Connect</button>
         <button class="btn-tool" onclick="showHistory()">📜<br>Riwayat</button>
         <button class="btn-undo" onclick="undoLastAction()">↩️<br>Batal</button>
-        <button class="btn-clear" onclick="clearAll()">AC</button>
-        <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
 
+        <!-- BARIS 2 -->
+        <button class="btn-clear" onclick="clearAll()">AC</button>
+        <button class="btn-rotate" onclick="toggleOrientation()">⟳<br>Putar</button>
+        <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
         <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
-        <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
+
+        <!-- BARIS 3 -->
         <button onclick="appendNum('7')" class="virtual-key">7</button>
         <button onclick="appendNum('8')" class="virtual-key">8</button>
         <button onclick="appendNum('9')" class="virtual-key">9</button>
-        <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
+        <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
+
+        <!-- BARIS 4 -->
         <button onclick="appendNum('4')" class="virtual-key">4</button>
         <button onclick="appendNum('5')" class="virtual-key">5</button>
         <button onclick="appendNum('6')" class="virtual-key">6</button>
-        <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
+        <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
+
+        <!-- BARIS 5 -->
         <button onclick="appendNum('1')" class="virtual-key">1</button>
         <button onclick="appendNum('2')" class="virtual-key">2</button>
         <button onclick="appendNum('3')" class="virtual-key">3</button>
-        <button class="btn-op virtual-key" onclick="appendOp('+')">+</button>
+        <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
+
+        <!-- BARIS 6 -->
         <button onclick="appendNum('0')" class="virtual-key">0</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('00')">00</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('000')">000</button>
-        <button id="btn-eq" class="btn-eq virtual-key" onclick="handleEqual()">=</button>
+        <button class="btn-op virtual-key" onclick="appendOp('+')">+</button>
     </div>
 
     <script>
-        // --- 1. DEKLARASI VARIABEL GLOBAL (FIX ReferenceError) ---
-        var printerDevice = null;
-        var printerCharacteristic = null;
-        var expression = ""; 
-        var totalBill = 0; 
-        var paymentInput = ""; 
-        var isPaymentMode = false; 
-        var isSoundOn = true;
-        var inputHistory = []; 
-        var lastTap = 0;
-        var audioCtx = null;
+        // --- SETUP DASAR ---
+        const manifestData={"name":"Kasir Pedagang Pro","short_name":"Kasir Pro","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
+        
+        const manifestEl = document.getElementById('manifest-placeholder');
+        if (manifestEl) {
+            manifestEl.setAttribute('href',URL.createObjectURL(new Blob([JSON.stringify(manifestData)],{type:'application/json'})));
+        }
 
-        // --- 2. CEK ENVIRONMENT (FIX SecurityError) ---
-        window.onload = function() {
-            // Cek apakah di dalam iframe
-            if (window.self !== window.top) {
-                alert("PERINGATAN: Aplikasi berjalan di dalam mode terbatas (Iframe/WebView).\n\nBluetooth tidak akan berfungsi.\n\nSOLUSI: Buka di Google Chrome > ketik alamat web/file langsung di address bar.");
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
+        async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
+        
+        // --- FULLSCREEN & ORIENTASI ---
+        async function attemptFullScreen() { 
+            if(!document.fullscreenElement && document.documentElement.requestFullscreen){ 
+                try { await document.documentElement.requestFullscreen(); } catch(e) {}
+            } 
+        }
+        document.body.addEventListener('click', attemptFullScreen); 
+        document.body.addEventListener('touchstart', attemptFullScreen);
+
+        async function toggleOrientation() {
+            await attemptFullScreen();
+            const type = screen.orientation.type;
+            try {
+                if (type.startsWith('portrait')) await screen.orientation.lock('landscape');
+                else await screen.orientation.lock('portrait');
+            } catch (err) {
+                console.log("Lock failed:", err);
+                try { screen.orientation.unlock(); } catch(e){}
+                alert("Gagal mengunci. Pastikan sudah 'Layar Penuh' (klik layar dulu).");
             }
-            // Register SW
-            if('serviceWorker' in navigator){ 
-                navigator.serviceWorker.register('service-worker.js').catch(err=>{}); 
-            }
-        };
+        }
+
+        if('serviceWorker' in navigator){ window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(err=>{}); }); }
+
+        // --- VARIABEL & LOGIC ---
+        let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
+        let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
+        window.audioCtx = null;
 
         const receiptList = document.getElementById('receipt-list');
         const mainDisplay = document.getElementById('main-display'); 
         const payTotalDisplay = document.getElementById('pay-total');
         const payInputDisplay = document.getElementById('pay-input-display');
         const payChangeDisplay = document.getElementById('pay-change-display');
-        const btnEq = document.getElementById('btn-eq');
         const btnMain = document.getElementById('btn-main-action');
         const btnSound = document.getElementById('btn-sound');
         const btnBt = document.getElementById('btn-bt');
@@ -278,15 +314,22 @@
         // --- CORE FUNCTIONS ---
         function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
         
-        function initAudio() { if(!audioCtx && (window.AudioContext||window.webkitAudioContext)) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+        // Format visual helper
+        function formatVisual(text) {
+            if (!text) return "";
+            let vis = text.replace(/\*/g, ' × ').replace(/\//g, ' ÷ ');
+            return vis.replace(/\d+/g, (n) => parseInt(n).toLocaleString('id-ID'));
+        }
+
+        function initAudio() { if(!window.audioCtx && (window.AudioContext||window.webkitAudioContext)) window.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
         function playClickSound() {
-            if(!isSoundOn) return; initAudio(); if(!audioCtx) return;
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
-            osc.connect(g); g.connect(audioCtx.destination);
-            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-            g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.05);
-            osc.start(); osc.stop(audioCtx.currentTime+0.05);
+            if(!isSoundOn) return; initAudio(); if(!window.audioCtx) return;
+            if(window.audioCtx.state === 'suspended') window.audioCtx.resume();
+            const osc = window.audioCtx.createOscillator(); const g = window.audioCtx.createGain();
+            osc.connect(g); g.connect(window.audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, window.audioCtx.currentTime);
+            g.gain.setValueAtTime(0.05, window.audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, window.audioCtx.currentTime+0.05);
+            osc.start(); osc.stop(window.audioCtx.currentTime+0.05);
         }
         function toggleSound() { isSoundOn = !isSoundOn; btnSound.innerHTML = isSoundOn ? '🔊<br>Suara' : '🔇<br>Mute'; if(isSoundOn) playClickSound(); }
         document.getElementById('keypad').addEventListener('click', (e) => { if(e.target.closest('button')) playClickSound(); });
@@ -299,16 +342,45 @@
                 if (!expression) {
                     receiptList.innerHTML = '<div class="receipt-item active">0</div>'; mainDisplay.innerText = "0";
                 } else {
-                    let visualExp = expression.replace(/\*/g, '×').replace(/\//g, '÷').replace(/\-/g, ' -');
-                    let items = visualExp.split('+');
+                    let parts = expression.split(/([+\-])/);
                     let html = '';
-                    items.forEach((item, index) => {
-                        let formattedItem = item.replace(/\d+/g, (n) => parseInt(n).toLocaleString('id-ID'));
-                        let prefix = (index > 0) ? '+ ' : '';
-                        let activeClass = (index === items.length - 1) ? 'active' : '';
-                        html += `<div class="receipt-item ${activeClass}">${prefix}${formattedItem}</div>`;
-                    });
+                    
+                    const createItem = (op, content, isActive) => {
+                        let formatted = formatVisual(content);
+                        let subRes = "";
+                        if (content.match(/[\*\/]/) && !content.match(/[\*\/]$/)) {
+                            try {
+                                let val = eval(content);
+                                if (!isNaN(val)) subRes = "= " + val.toLocaleString('id-ID');
+                            } catch(e) {}
+                        }
+                        
+                        let itemStyle = subRes ? 'display:flex; justify-content:space-between;' : '';
+                        let rightSide = subRes ? `<span style="opacity:0.8">${subRes}</span>` : '';
+                        
+                        return `<div class="receipt-item ${isActive}" style="${itemStyle}">
+                            <span>${op} ${formatted}</span>
+                            ${rightSide}
+                        </div>`;
+                    };
+
+                    if (parts.length > 0) {
+                        let content = parts[0];
+                        if (content !== "" || parts.length === 1) {
+                             let isActive = (parts.length === 1) ? 'active' : '';
+                             html += createItem('', content || '0', isActive);
+                        }
+                    }
+
+                    for (let i = 1; i < parts.length; i += 2) {
+                        let operator = parts[i];
+                        let content = parts[i+1] || "";
+                        let isActive = (i + 2 >= parts.length) ? 'active' : '';
+                        html += createItem(operator, content, isActive);
+                    }
+                    
                     receiptList.innerHTML = html;
+                    
                     try {
                         let evalExpr = expression;
                         if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
@@ -367,7 +439,6 @@
             } catch(e) { return 0; }
         }
 
-        function handleEqual() { if(!isPaymentMode) calculate(); else finishTransaction(false); }
         function handleMainAction() {
             if(!isPaymentMode) {
                 let total = calculate();
@@ -380,8 +451,8 @@
 
         function switchModeUI(isPay) {
             const vCalc = document.getElementById('view-calc'); const vPay = document.getElementById('view-pay');
-            if(isPay) { vCalc.style.display='none'; vPay.style.display='flex'; document.body.classList.add('mode-payment'); btnEq.innerText="💾 SIMPAN"; btnMain.innerText="🖨️ CETAK"; }
-            else { vCalc.style.display='flex'; vPay.style.display='none'; document.body.classList.remove('mode-payment'); btnEq.innerText="="; btnMain.innerText="BAYAR"; }
+            if(isPay) { vCalc.style.display='none'; vPay.style.display='flex'; document.body.classList.add('mode-payment'); btnMain.innerText="🖨️ CETAK"; }
+            else { vCalc.style.display='flex'; vPay.style.display='none'; document.body.classList.remove('mode-payment'); btnMain.innerText="BAYAR"; }
         }
 
         async function finishTransaction(print) {
@@ -393,6 +464,7 @@
                 if (!printerCharacteristic) {
                     if(confirm("Printer belum terhubung. Hubungkan sekarang?")) await connectBluetooth();
                 }
+                
                 if (printerCharacteristic) {
                     saveHistory(totalBill, pay, change);
                     await printReceipt(totalBill, pay, change);
@@ -420,33 +492,37 @@
             alert(msg);
         }
 
-        // --- BLUETOOTH (SIMPLE STABLE VERSION) ---
         async function connectBluetooth() {
-            // Cek dukungan Browser
             if (!navigator.bluetooth) {
-                alert("Browser ini tidak mendukung Bluetooth. Gunakan Google Chrome versi terbaru.");
+                alert("Browser ini tidak mendukung koneksi Bluetooth langsung.\nHarap update Google Chrome ke versi terbaru (versi 56+).");
                 return;
             }
-
             try {
+                if (printerDevice && printerDevice.gatt.connected) {
+                    printerDevice.gatt.disconnect();
+                }
+
                 printerDevice = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
-                const server = await printerDevice.gatt.connect();
-                // Delay 500ms untuk kestabilan koneksi di Android
-                await new Promise(resolve => setTimeout(resolve, 500));
                 
+                printerDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                const server = await printerDevice.gatt.connect();
+                await new Promise(r => setTimeout(r, 500));
                 const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 printerCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                
-                btnBt.innerHTML = '🟢<br>Ready'; 
-                btnBt.style.backgroundColor = "#059669";
+                btnBt.innerHTML = '🟢<br>Ready'; btnBt.style.backgroundColor = "#059669";
             } catch (e) { 
                 alert("Gagal Konek: " + e); 
-                btnBt.innerHTML = '🖨️<br>Connect'; 
-                btnBt.style.backgroundColor = "#475569"; 
+                onDisconnected(); 
             }
         }
 
-        // Helper untuk encode string ke Uint8Array tanpa TextEncoder (untuk browser jadul)
+        function onDisconnected() {
+            btnBt.innerHTML = '🖨️<br>Connect'; 
+            btnBt.style.backgroundColor = "#475569";
+            printerCharacteristic = null;
+        }
+
         function strToBytes(str) {
             const bytes = [];
             for (let i = 0; i < str.length; i++) {
@@ -464,7 +540,7 @@
                 const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
                 const boldOn = ESC + 'E' + '\u0001'; const boldOff = ESC + 'E' + '\u0000';
                 const bigFont = GS + '!' + '\u0011'; const normalFont = GS + '!' + '\u0000';
-                const init = ESC + '@'; // Reset Printer
+                const init = ESC + '@';
 
                 const now = new Date();
                 const dateStr = now.toLocaleDateString('id-ID');
@@ -472,14 +548,28 @@
 
                 let evalExpr = expression;
                 if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
-                let items = evalExpr.split('+');
+                
+                let rawParts = evalExpr.split(/([+\-])/);
+                let printItems = [];
+                
+                if (rawParts.length > 0 && rawParts[0]) {
+                    printItems.push({op: '', val: rawParts[0]});
+                }
+                
+                for (let i = 1; i < rawParts.length; i += 2) {
+                    if (rawParts[i+1]) {
+                        printItems.push({op: rawParts[i], val: rawParts[i+1]});
+                    }
+                }
+
                 let itemsOutput = "";
                 let itemCount = 0;
                 
-                items.forEach((item, index) => {
-                    let cleanItem = item.trim();
+                printItems.forEach((itemObj, index) => {
+                    let cleanItem = itemObj.val.trim();
                     if(!cleanItem) return;
                     itemCount++;
+                    
                     let qty = 1; let price = 0;
                     if(cleanItem.includes('*')) {
                         let parts = cleanItem.split('*');
@@ -487,8 +577,16 @@
                         if(!isNaN(v1) && !isNaN(v2)) { price = Math.max(v1, v2); qty = Math.min(v1, v2); }
                     } else { try { price = parseInt(eval(cleanItem)); } catch(e) { } }
                     
-                    if(price) itemsOutput += `Brg ${index + 1} : ${qty} x Rp ${price.toLocaleString('id-ID')}\n`;
-                    else itemsOutput += `Brg ${index + 1} : Error\n`;
+                    let sign = (itemObj.op === '-') ? '- ' : ''; 
+                    
+                    // --- UPDATE CETAK STRUK: TAMBAHKAN TOTAL JIKA QTY > 1 ---
+                    let lineTotal = qty * price;
+                    itemsOutput += `Brg ${index + 1} : ${qty} x ${sign}Rp ${price.toLocaleString('id-ID')}`;
+                    if(qty > 1) {
+                        itemsOutput += ` = Rp ${lineTotal.toLocaleString('id-ID')}`;
+                    }
+                    itemsOutput += `\n`;
+                    // ---------------------------------------------------------
                 });
 
                 let summaryLine = `Jml Jenis Barang ${itemCount}\n`;
@@ -514,7 +612,6 @@
                     center + "Terima Kasih\n" +
                     "Semoga Berkah\n\n\n";
 
-                // Gunakan Helper Manual jika TextEncoder tidak ada
                 let encodedData;
                 if (typeof TextEncoder !== 'undefined') {
                     encodedData = new TextEncoder().encode(receiptText);
@@ -522,21 +619,17 @@
                     encodedData = strToBytes(receiptText);
                 }
                 
-                // Chunking lebih kecil & lambat untuk HP Lama
                 const maxChunk = 50; 
                 for (let i = 0; i < encodedData.length; i += maxChunk) {
                     const chunk = encodedData.slice(i, i + maxChunk);
                     await printerCharacteristic.writeValue(chunk);
-                    // Jeda diperlama jadi 100ms
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
-            } catch (error) { alert("Gagal mencetak: " + error); }
+            } catch (error) { 
+                alert("Gagal mencetak: " + error); 
+                onDisconnected();
+            }
         }
-
-        // --- PWA INSTALL APP ---
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
-        async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
     </script>
 </body>
 </html>
