@@ -81,8 +81,9 @@
             flex: 1; overflow-y: auto; text-align: right; padding-right: 5px; margin-bottom: 5px;
         }
 
+        /* --- PERBAIKAN UKURAN HURUF ITEM --- */
         .receipt-item {
-            font-size: 28px; 
+            font-size: 28px; /* Fallback diperbesar */
             font-size: clamp(1.6rem, 4vh, 2.2rem); 
             color: #334155; 
             font-weight: 600; 
@@ -267,7 +268,23 @@
             }
         }
 
-        if('serviceWorker' in navigator){ window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(err=>{}); }); }
+        // --- PWA UPDATE AUTOMATION (PERBAIKAN) ---
+        if('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(reg => {
+                    // Paksa cek update ke server setiap kali aplikasi dibuka
+                    reg.update();
+                }).catch(err => console.log('SW fail', err));
+
+                // Jika ada SW baru yang aktif (Update selesai), reload halaman
+                let refreshing;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) return;
+                    window.location.reload();
+                    refreshing = true;
+                });
+            });
+        }
 
         // --- VARIABEL & LOGIC ---
         let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
@@ -524,6 +541,7 @@
                 printerDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
                 const server = await printerDevice.gatt.connect();
+                // Delay penting untuk HP lama
                 await new Promise(r => setTimeout(r, 500));
                 const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 printerCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
