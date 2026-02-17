@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-pro-v1';
+const CACHE_NAME = 'kalkulator-ads1';
 const urlsToCache = [
   './',
   './index.html',
