@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalkulator-ads-v6'; // Ganti angka versi ini setiap kali Anda mengupdate index.html
+const CACHE_NAME = 'kalkulator-ads-v7'; // Ganti angka versi ini setiap kali Anda mengupdate index.html
 const urlsToCache = [
   './',
   './index.html',
