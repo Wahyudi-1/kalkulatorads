@@ -339,11 +339,35 @@
             }
         });
 
-        document.addEventListener('mousedown', (e) => {
-            if (!e.target.closest('.display-container') && document.body.classList.contains('external-keyboard-mode')) {
-                document.body.classList.remove('external-keyboard-mode');
-            }
-        });
+        // --- PWA UPDATE AUTOMATION (DISEMPURNAKAN) ---
+        if('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(reg => {
+                    // Paksa cek update ke server setiap kali aplikasi dibuka
+                    reg.update();
+
+                    // Deteksi jika ada versi baru yang sedang diunduh
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            // Jika versi baru selesai diunduh dan siap
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Kirim sinyal untuk langsung melewati fase "waiting" dan aktifkan
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+                }).catch(err => console.log('SW fail', err));
+
+                // Jika Service Worker baru mengambil alih kendali, muat ulang aplikasi agar update tampil
+                let refreshing;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) return;
+                    window.location.reload();
+                    refreshing = true;
+                });
+            });
+        }
 
         // --- CORE FUNCTIONS ---
         function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
@@ -644,8 +668,8 @@
                     `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
                     `KEMBALI : Rp ${change.toLocaleString('id-ID')}\n` +
                     "--------------------------------\n" +
-                    center + "Pesan Barang W.A: 0856 4883 0413\n" +
-                    "Terima Kasih, Semoga Berkah\n\n\n";
+                    center + "Terima Kasih\n" +
+                    "Semoga Berkah\n\n\n";
 
                 let encodedData;
                 if (typeof TextEncoder !== 'undefined') {
