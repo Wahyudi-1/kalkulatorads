@@ -8,12 +8,15 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kalkulator ADS">
-    <meta name="application-name" content="Kalkulator ADS">
+    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
+    <meta name="application-name" content="Kasir Pro">
 
-    <title>Kalkulator ADS</title>
-    <link rel="manifest" id="manifest-placeholder" href="manifest.json">
+    <title>Kasir Pedagang Pro</title>
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%232563eb%22 rx=%2220%22 ry=%2220%22/><text x=%2250%22 y=%2250%22 font-size=%2260%22 text-anchor=%22middle%22 dy=%22.35em%22>🧮</text></svg>">
+
+    <link rel="manifest" id="manifest-placeholder">
 
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -28,22 +31,31 @@
             --btn-save-bg: #059669;
             --btn-clear-bg: #dc2626;
             --btn-tool-bg: #475569;
-            --btn-rotate-bg: #0f766e;
             --text-main: #1e293b;
             --text-muted: #64748b;
         }
 
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
             display: grid;
+            /* Layout Default: Toolbar | Display (40%) | Keypad */
             grid-template-columns: 1fr;
-            grid-template-rows: auto 40% 1fr; 
+            grid-template-rows: auto 40vh 1fr; 
             grid-template-areas: "toolbar" "display" "keypad";
+            transition: grid-template-rows 0.3s ease;
         }
 
-        body.external-keyboard-mode { grid-template-rows: auto 1fr auto; }
+        /* --- MODE KEYBOARD EKSTERNAL (Tampilan Layar Luas) --- */
+        body.external-keyboard-mode {
+            /* Display membesar (70%), Keypad mengecil */
+            grid-template-rows: auto 1fr auto; 
+        }
 
         @media (orientation: landscape) {
             body {
@@ -51,358 +63,316 @@
                 grid-template-rows: auto 1fr;
                 grid-template-areas: "toolbar keypad" "display keypad";
             }
-            body.external-keyboard-mode { grid-template-columns: 70% 30%; }
+            body.external-keyboard-mode {
+                grid-template-columns: 70% 30%; 
+            }
         }
 
-        /* TOOLBAR */
         .toolbar {
-            grid-area: toolbar; display: flex; justify-content: center; align-items: center;
-            background: #e2e8f0; z-index: 5; min-height: 40px; padding: 5px; 
-            gap: 10px; grid-gap: 10px; 
+            grid-area: toolbar;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #e2e8f0;
+            z-index: 5;
+            min-height: 0;
+            padding: 5px;
+            gap: 10px;
         }
         
         .btn-header {
-            background-color: #2563eb; color: white; border: none; border-radius: 6px;
-            padding: 8px 12px; font-size: 14px; font-weight: bold; cursor: pointer;
-            display: flex; align-items: center; gap: 5px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         #btn-install { display: none; } 
 
-        /* DISPLAY */
         .display-container {
-            grid-area: display; background: var(--screen-bg); padding: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; z-index: 4;
-            display: flex; flex-direction: column; overflow: hidden; cursor: pointer; 
+            grid-area: display;
+            background: var(--screen-bg);
+            padding: 10px 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Indikator bahwa area ini bisa di-tap */
+            cursor: pointer; 
         }
 
         #view-calc { display: flex; flex-direction: column; height: 100%; justify-content: space-between; }
 
         .receipt-list {
-            flex: 1; overflow-y: auto; text-align: right; padding-right: 5px; margin-bottom: 5px;
+            flex: 1;
+            overflow-y: auto;
+            text-align: right;
+            padding-right: 5px;
+            margin-bottom: 5px;
+            scrollbar-width: thin;
+            scroll-behavior: smooth;
         }
+        .receipt-list::-webkit-scrollbar { width: 6px; }
+        .receipt-list::-webkit-scrollbar-track { background: transparent; }
+        .receipt-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
 
-        /* --- PERBAIKAN UKURAN HURUF ITEM --- */
         .receipt-item {
-            font-size: 28px; /* Fallback diperbesar */
-            font-size: clamp(1.6rem, 4vh, 2.2rem); 
-            color: #334155; 
-            font-weight: 600; 
-            border-bottom: 1px dashed #e2e8f0; padding: 6px 0;
-            line-height: 1.3;
+            font-size: clamp(1.1rem, 2.5vh, 1.6rem);
+            color: var(--text-muted);
+            line-height: 1.4;
+            border-bottom: 1px dashed #e2e8f0;
+            padding: 2px 0;
         }
-        .receipt-item.active { color: var(--text-main); font-weight: 800; border-bottom: none; }
+        .receipt-item.active { color: var(--text-main); font-weight: 600; border-bottom: none; }
 
         .live-total-box {
-            background: #f8fafc; border-top: 2px solid #2563eb; padding: 5px 0; text-align: right;
+            background: #f8fafc;
+            border-top: 2px solid #2563eb;
+            padding: 8px 0 0 0;
+            text-align: right;
+            flex-shrink: 0;
         }
 
-        .total-label { display: block; font-size: 12px; color: var(--text-muted); }
-        #main-display { 
-            font-size: 40px;
-            font-size: clamp(2.5rem, 6vh, 4rem); 
-            font-weight: 800; color: var(--text-main); line-height: 1; 
-        }
+        .total-label { display: block; font-size: 0.9rem; color: var(--text-muted); margin-bottom: -2px; }
+        #main-display { font-size: clamp(2.5rem, 6vh, 3.5rem); font-weight: 800; color: var(--text-main); word-wrap: break-word; line-height: 1.1; }
 
-        /* PAYMENT MODE */
         .pay-mode-view { display: none; flex-direction: column; justify-content: space-between; height: 100%; padding: 5px 0; }
         .pay-row { display: flex; justify-content: space-between; align-items: center; }
-        .label-pay { font-size: 16px; font-weight: bold; color: #64748b; }
-        
+        .label-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .label-pay { font-size: clamp(0.9rem, 2vh, 1.2rem); color: var(--text-muted); font-weight: 600; }
         .btn-edit-total {
-            background: #f59e0b; border: none; border-radius: 4px; color: white; padding: 5px 10px; font-weight: bold;
+            background: #f59e0b; border: none; border-radius: 4px; color: white; padding: 4px 10px;
+            font-size: clamp(0.7rem, 1.5vh, 0.9rem); cursor: pointer; font-weight: bold;
         }
-        
-        #pay-total { font-size: 24px; font-weight: bold; }
+        #pay-total { font-size: clamp(1.5rem, 4vh, 2rem); color: #1e293b; font-weight: 800; text-align: right;}
         #pay-input-display { 
-            font-size: 40px;
-            font-size: clamp(2.5rem, 7vh, 4rem); font-weight: 800; text-align: right; border-bottom: 3px solid #2563eb; 
+            font-size: clamp(2.5rem, 7vh, 4.5rem); color: var(--text-main); font-weight: 800; 
+            text-align: right; border-bottom: 3px solid #2563eb; margin: 5px 0;
         }
         #pay-change-display {
-            font-size: 24px; font-weight: bold; text-align: right; color: var(--btn-save-bg);
+            font-size: clamp(1.2rem, 3.5vh, 2.2rem); font-weight: bold; text-align: right; color: var(--btn-save-bg);
+            word-break: break-word; max-width: 65%; line-height: 1.1;
         }
 
-        /* KEYPAD */
+        /* --- 3. KEYPAD AREA --- */
         .keypad-container {
-            grid-area: keypad; padding: 5px; display: grid; 
-            gap: 4px; grid-gap: 4px;
+            grid-area: keypad;
+            padding: 5px;
+            display: grid;
+            gap: 4px;
             background-color: var(--bg-color);
-            height: 100%; overflow-y: auto;
-            grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr);
+            height: 100%;
+            overflow-y: auto;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(6, 1fr);
         }
 
+        /* MODE KEYBOARD: Layout Khusus (Hanya 2 Baris) */
         body.external-keyboard-mode .keypad-container {
-            grid-template-columns: repeat(4, 1fr); 
-            grid-template-rows: repeat(2, 60px); 
-            align-content: end; height: auto; padding-top: 0;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 80px); 
+            align-content: end; 
+            height: auto; 
+            padding-top: 0;
         }
 
         button {
-            border: none; border-radius: 6px; 
-            font-size: 24px;
-            font-size: clamp(1.5rem, 4vh, 2.5rem); 
-            font-weight: 700; cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
-            box-shadow: 0 2px 0 #cbd5e1; display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%;
+            border: none; border-radius: 8px; font-size: clamp(1.5rem, 4vh, 2.5rem); font-weight: 700;
+            cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
+            box-shadow: 0 2px 0 #cbd5e1; transition: opacity 0.1s;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+            user-select: none; width: 100%; height: 100%;
         }
-        button:active { opacity: 0.7; transform: translateY(2px); }
+        button:active { opacity: 0.7; transform: scale(0.98); }
 
         body.external-keyboard-mode .virtual-key { display: none !important; }
 
-        .btn-tool { background-color: var(--btn-tool-bg); color: white; font-size: 14px; flex-direction: column; }
-        .btn-undo { background-color: #f59e0b; color: white; font-size: 14px; flex-direction: column; }
-        .btn-rotate { background-color: var(--btn-rotate-bg); color: white; font-size: 14px; flex-direction: column; }
-        
-        .btn-op { background-color: var(--btn-op-bg); color: #1e3a8a; }
-        .btn-clear { background-color: var(--btn-clear-bg); color: white; font-size: 20px; }
-        .btn-pay { background-color: var(--btn-action-bg); color: white; font-size: 16px; text-transform: uppercase; }
-        .btn-eq { background-color: #2563eb; color: white; }
+        .btn-tool {
+            background-color: var(--btn-tool-bg); color: white;
+            font-size: clamp(1rem, 2.5vh, 1.2rem);
+            display: flex; flex-direction: column; gap: 2px; font-weight: 600;
+        }
+        .btn-undo { background-color: #f59e0b; color: white; font-size: clamp(1rem, 2.5vh, 1.2rem); flex-direction: column; }
+        .btn-op { background-color: var(--btn-op-bg); color: #1e3a8a; font-size: clamp(2rem, 5vh, 3rem); }
+        .btn-clear { background-color: var(--btn-clear-bg); color: white; font-size: clamp(1.2rem, 3vh, 1.8rem); }
+        .btn-zero-xx { background-color: #fffbeb; color: #92400e; font-size: clamp(1.2rem, 3vh, 1.8rem); font-weight: 800; }
+        .btn-backspace { background-color: var(--btn-op-bg); color: #1e3a8a; font-size: clamp(2rem, 4vh, 2.5rem); }
+        .btn-pay {
+            background-color: var(--btn-action-bg); color: white;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            font-size: clamp(0.8rem, 2vh, 1.2rem); font-weight: 800;
+        }
+        .btn-eq { background-color: #2563eb; color: white; font-size: clamp(2rem, 5vh, 3rem); }
 
-        /* Helpers */
-        .sw-status { display: none; }
+        body.mode-payment .btn-op { opacity: 0.2; pointer-events: none; }
+        body.mode-payment .btn-backspace { opacity: 1; pointer-events: auto; }
+        body.mode-payment .btn-clear { opacity: 1; pointer-events: auto; }
+        body.mode-payment .btn-undo { opacity: 0.2; pointer-events: none; }
+        body.mode-payment .btn-eq { background-color: var(--btn-save-bg); font-size: clamp(1rem, 3vh, 1.5rem); }
+        body.mode-payment .btn-pay { background-color: var(--btn-print-bg); }
     </style>
 </head>
 <body id="body-app">
 
     <div class="toolbar" id="toolbar-area">
-        <button class="btn-header" id="btn-install" onclick="installApp()">📲 Install</button>
+        <button class="btn-header" id="btn-install" onclick="installApp()">📲 Install App</button>
     </div>
 
+    <!-- Container Display dengan deteksi Double Tap -->
     <div class="display-container" id="display-area">
+        <!-- MODE 1 -->
         <div id="view-calc">
-            <div id="receipt-list" class="receipt-list"><div class="receipt-item active">0</div></div>
+            <div id="receipt-list" class="receipt-list">
+                <div class="receipt-item active">0</div>
+            </div>
             <div class="live-total-box">
                 <span class="total-label">Total Belanja:</span>
                 <span id="main-display">0</span>
             </div>
         </div>
 
+        <!-- MODE 2 -->
         <div id="view-pay" class="pay-mode-view">
             <div class="pay-row">
-                <div class="label-group" style="display:flex; gap:5px; align-items:center;">
-                    <span class="label-pay">TOTAL</span>
-                    <button class="btn-edit-total" onclick="editTransaction()">UBAH</button>
+                <div class="label-group">
+                    <span class="label-pay">TOTAL AKHIR</span>
+                    <button class="btn-edit-total" onclick="editTransaction()">✏️ UBAH</button>
                 </div>
                 <span id="pay-total">Rp 0</span>
             </div>
+            
             <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-                <div style="text-align:right; font-size:14px; color:#64748b;">Uang Pelanggan:</div>
+                <div style="text-align:right; font-size:0.9rem; color:#64748b;">Uang Pelanggan:</div>
                 <div id="pay-input-display">0</div>
             </div>
+
             <div class="pay-row">
-                <span class="label-pay" id="pay-change-label">KEMBALI</span>
+                <span class="label-pay">KEMBALI</span>
                 <span id="pay-change-display">Rp 0</span>
             </div>
         </div>
     </div>
 
     <div class="keypad-container" id="keypad">
-        <!-- BARIS 1 -->
-        <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<br>Suara</button>
-        <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<br>Connect</button>
-        <button class="btn-tool" onclick="showHistory()">📜<br>Riwayat</button>
-        <button class="btn-undo" onclick="undoLastAction()">↩️<br>Batal</button>
-
-        <!-- BARIS 2 -->
+        <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<span style="font-size:0.6em">Suara</span></button>
+        <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<span style="font-size:0.6em">Connect</span></button>
+        <button class="btn-tool" onclick="showHistory()">📜<span style="font-size:0.6em">Riwayat</span></button>
+        <button class="btn-undo" onclick="undoLastAction()">↩️<span style="font-size:0.6em">Batal</span></button>
         <button class="btn-clear" onclick="clearAll()">AC</button>
-        <button class="btn-rotate" onclick="toggleOrientation()">⟳<br>Putar</button>
         <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
-        <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
 
-        <!-- BARIS 3 -->
+        <!-- Tombol Virtual -->
+        <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
+        <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
+
         <button onclick="appendNum('7')" class="virtual-key">7</button>
         <button onclick="appendNum('8')" class="virtual-key">8</button>
         <button onclick="appendNum('9')" class="virtual-key">9</button>
-        <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
+        <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
 
-        <!-- BARIS 4 -->
         <button onclick="appendNum('4')" class="virtual-key">4</button>
         <button onclick="appendNum('5')" class="virtual-key">5</button>
         <button onclick="appendNum('6')" class="virtual-key">6</button>
-        <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
+        <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
 
-        <!-- BARIS 5 -->
         <button onclick="appendNum('1')" class="virtual-key">1</button>
         <button onclick="appendNum('2')" class="virtual-key">2</button>
         <button onclick="appendNum('3')" class="virtual-key">3</button>
-        <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
+        <button class="btn-op virtual-key" onclick="appendOp('+')">+</button>
 
-        <!-- BARIS 6 -->
         <button onclick="appendNum('0')" class="virtual-key">0</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('00')">00</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('000')">000</button>
-        <button class="btn-op virtual-key" onclick="appendOp('+')">+</button>
+        <button id="btn-eq" class="btn-eq virtual-key" onclick="handleEqual()">=</button>
     </div>
 
     <script>
-        // --- SETUP DASAR ---
-        const manifestData={"name":"Kalkulator ADS","short_name":"Kalkulator ADS","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
-        
-        const manifestEl = document.getElementById('manifest-placeholder');
-        if (manifestEl) {
-            manifestEl.setAttribute('href',URL.createObjectURL(new Blob([JSON.stringify(manifestData)],{type:'application/json'})));
-        }
+        const manifestData = {"name":"Kasir Pedagang Pro","short_name":"Kasir Pro","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
+        document.getElementById('manifest-placeholder').setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifestData)],{type:'application/json'})));
 
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('btn-install').style.display = 'inline-flex'; });
         async function installApp() { if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; document.getElementById('btn-install').style.display='none'; } }
         
-        // --- FULLSCREEN & ORIENTASI ---
-        async function attemptFullScreen() { 
-            if(!document.fullscreenElement && document.documentElement.requestFullscreen){ 
-                try { await document.documentElement.requestFullscreen(); } catch(e) {}
-            } 
-        }
-        document.body.addEventListener('click', attemptFullScreen); 
-        document.body.addEventListener('touchstart', attemptFullScreen);
+        function attemptFullScreen() { if(!document.fullscreenElement && document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen().catch(()=>{}); } }
+        document.body.addEventListener('click', attemptFullScreen); document.body.addEventListener('touchstart', attemptFullScreen);
 
-        async function toggleOrientation() {
-            await attemptFullScreen();
-            const type = screen.orientation.type;
-            try {
-                if (type.startsWith('portrait')) await screen.orientation.lock('landscape');
-                else await screen.orientation.lock('portrait');
-            } catch (err) {
-                console.log("Lock failed:", err);
-                try { screen.orientation.unlock(); } catch(e){}
-                alert("Gagal mengunci. Pastikan sudah 'Layar Penuh' (klik layar dulu).");
-            }
-        }
+        if('serviceWorker' in navigator){ navigator.serviceWorker.register(URL.createObjectURL(new Blob(['self.addEventListener("install",e=>{self.skipWaiting()});self.addEventListener("fetch",e=>{})'],{type:'application/javascript'}))).catch(()=>{}); }
 
-        // --- PWA UPDATE AUTOMATION (PERBAIKAN) ---
-        if('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then(reg => {
-                    // Paksa cek update ke server setiap kali aplikasi dibuka
-                    reg.update();
-
-                    // Deteksi jika ada versi baru yang sedang diunduh
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            // Jika versi baru selesai diunduh dan siap
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Kirim sinyal untuk langsung melewati fase "waiting" dan aktifkan
-                                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                            }
-                        });
-                    });
-                }).catch(err => console.log('SW fail', err));
-
-                // Jika Service Worker baru mengambil alih kendali, muat ulang aplikasi agar update tampil
-                let refreshing;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (refreshing) return;
-                    window.location.reload();
-                    refreshing = true;
-                });
-            });
-        }
-
-        // --- VARIABEL & LOGIC ---
-        let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
-        let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
-        let isPrinting = false; // Tambahan variabel untuk mencegah cetak ganda
-        window.audioCtx = null;
+        let expression = ""; let totalBill = 0; let paymentInput = ""; let isPaymentMode = false; 
+        let isSoundOn = true; let audioCtx = null; let printerDevice = null; let printerCharacteristic = null;
+        let inputHistory = []; 
 
         const receiptList = document.getElementById('receipt-list');
         const mainDisplay = document.getElementById('main-display'); 
         const payTotalDisplay = document.getElementById('pay-total');
         const payInputDisplay = document.getElementById('pay-input-display');
         const payChangeDisplay = document.getElementById('pay-change-display');
+        const btnEq = document.getElementById('btn-eq');
         const btnMain = document.getElementById('btn-main-action');
         const btnSound = document.getElementById('btn-sound');
         const btnBt = document.getElementById('btn-bt');
 
-        // --- DOUBLE TAP ---
-        document.getElementById('display-area').addEventListener('click', (e) => {
-            const currentTime = new Date().getTime();
-            if ((currentTime - lastTap) < 300 && (currentTime - lastTap) > 0) {
-                e.preventDefault(); document.body.classList.toggle('external-keyboard-mode');
-            } 
-            lastTap = currentTime;
-        });
-
-        // --- KEYBOARD & MOUSE ---
+        // --- DOUBLE TAP LOGIC & AUTO DETECTION ---
+        let lastTap = 0;
+        
+        // 1. Deteksi Keyboard Fisik -> Auto Hide
         document.addEventListener('keydown', (event) => {
             const key = event.key;
-            
-            // Cegah aksi default browser untuk tombol kalkulator (seperti scroll)
-            if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape', '='].includes(key)) event.preventDefault();
+            if(['+', '-', '*', '/', 'Enter', 'Backspace', 'Escape'].includes(key)) event.preventDefault();
 
-            // Aktifkan mode keyboard eksternal otomatis
             if (!document.body.classList.contains('external-keyboard-mode')) {
                 document.body.classList.add('external-keyboard-mode');
             }
 
-            if (!isNaN(key) && key !== ' ') {
-                appendNum(key);
-            } else if (['+', '-', '*', '/'].includes(key)) {
-                appendOp(key);
-            } else if (key === 'Enter' || key === '=') {
-                // LOGIKA ENTER:
-                // 1. Mode Hitung -> Pindah ke Bayar
-                // 2. Mode Bayar -> Cetak Struk
-                handleMainAction();
-            } else if (key === 'Backspace') {
-                backspace();
-            } else if (key === 'Escape') {
-                clearAll();
-            } else if (key === 'z' && (event.ctrlKey || event.metaKey)) {
-                undoLastAction();
-            }
+            if (!isNaN(key) && key !== ' ') appendNum(key);
+            else if (['+', '-', '*', '/'].includes(key)) appendOp(key);
+            else if (key === 'Enter') handleMainAction();
+            else if (key === 'Backspace') backspace();
+            else if (key === 'Escape') clearAll();
+            else if (key === 'z' && (event.ctrlKey || event.metaKey)) undoLastAction();
         });
 
-        // --- PWA UPDATE AUTOMATION (DISEMPURNAKAN) ---
-        if('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then(reg => {
-                    // Paksa cek update ke server setiap kali aplikasi dibuka
-                    reg.update();
-
-                    // Deteksi jika ada versi baru yang sedang diunduh
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            // Jika versi baru selesai diunduh dan siap
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Kirim sinyal untuk langsung melewati fase "waiting" dan aktifkan
-                                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                            }
-                        });
-                    });
-                }).catch(err => console.log('SW fail', err));
-
-                // Jika Service Worker baru mengambil alih kendali, muat ulang aplikasi agar update tampil
-                let refreshing;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (refreshing) return;
-                    window.location.reload();
-                    refreshing = true;
-                });
-            });
-        }
-
-        // --- CORE FUNCTIONS ---
-        function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
+        // 2. Deteksi Double Tap di Display -> Toggle Mode
+        const displayArea = document.getElementById('display-area');
         
-        // Format visual helper
-        function formatVisual(text) {
-            if (!text) return "";
-            let vis = text.replace(/\*/g, ' × ').replace(/\//g, ' ÷ ');
-            return vis.replace(/\d+/g, (n) => parseInt(n).toLocaleString('id-ID'));
+        function toggleDisplayMode() {
+            document.body.classList.toggle('external-keyboard-mode');
         }
 
-        function initAudio() { if(!window.audioCtx && (window.AudioContext||window.webkitAudioContext)) window.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+        displayArea.addEventListener('click', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            
+            if (tapLength < 300 && tapLength > 0) {
+                e.preventDefault(); 
+                toggleDisplayMode();
+            } 
+            lastTap = currentTime;
+        });
+
+
+        // --- AUDIO & UI UTILS ---
+        function scrollToBottom() { setTimeout(() => { receiptList.scrollTop = receiptList.scrollHeight; }, 10); }
+        function initAudio() { if(!audioCtx && (window.AudioContext||window.webkitAudioContext)) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
         function playClickSound() {
-            if(!isSoundOn) return; initAudio(); if(!window.audioCtx) return;
-            if(window.audioCtx.state === 'suspended') window.audioCtx.resume();
-            const osc = window.audioCtx.createOscillator(); const g = window.audioCtx.createGain();
-            osc.connect(g); g.connect(window.audioCtx.destination);
-            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, window.audioCtx.currentTime);
-            g.gain.setValueAtTime(0.05, window.audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, window.audioCtx.currentTime+0.05);
-            osc.start(); osc.stop(window.audioCtx.currentTime+0.05);
+            if(!isSoundOn) return; initAudio(); if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.05);
+            osc.start(); osc.stop(audioCtx.currentTime+0.05);
         }
-        function toggleSound() { isSoundOn = !isSoundOn; btnSound.innerHTML = isSoundOn ? '🔊<br>Suara' : '🔇<br>Mute'; if(isSoundOn) playClickSound(); }
+        function toggleSound() { isSoundOn = !isSoundOn; btnSound.innerHTML = isSoundOn ? '🔊<span style="font-size:0.6em">Suara</span>' : '🔇<span style="font-size:0.6em">Mute</span>'; if(isSoundOn) playClickSound(); }
         document.getElementById('keypad').addEventListener('click', (e) => { if(e.target.closest('button')) playClickSound(); });
 
         function saveState() { if(inputHistory.length > 20) inputHistory.shift(); inputHistory.push(expression); }
@@ -410,4 +380,27 @@
 
         function updateDisplay() {
             if (!isPaymentMode) {
-     
+                if (!expression) {
+                    receiptList.innerHTML = '<div class="receipt-item active">0</div>';
+                    mainDisplay.innerText = "0";
+                } else {
+                    let visualExp = expression.replace(/\*/g, '×').replace(/\//g, '÷').replace(/\-/g, ' -');
+                    let items = visualExp.split('+');
+                    let html = '';
+                    items.forEach((item, index) => {
+                        let formattedItem = item.replace(/\d+/g, (n) => parseInt(n).toLocaleString('id-ID'));
+                        let prefix = (index > 0) ? '+ ' : '';
+                        let activeClass = (index === items.length - 1) ? 'active' : '';
+                        html += `<div class="receipt-item ${activeClass}">${prefix}${formattedItem}</div>`;
+                    });
+                    receiptList.innerHTML = html;
+                    try {
+                        let evalExpr = expression;
+                        if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
+                        if(evalExpr) mainDisplay.innerText = eval(evalExpr).toLocaleString('id-ID');
+                    } catch (e) { }
+                }
+                scrollToBottom();
+            } else {
+                let val = parseInt(paymentInput || "0");
+                payInputDisplay.innerText = val
