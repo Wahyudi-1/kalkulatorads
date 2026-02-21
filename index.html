@@ -189,7 +189,7 @@
                 <div id="pay-input-display">0</div>
             </div>
             <div class="pay-row">
-                <span class="label-pay">KEMBALI</span>
+                <span class="label-pay" id="pay-change-label">KEMBALI</span>
                 <span id="pay-change-display">Rp 0</span>
             </div>
         </div>
@@ -274,9 +274,21 @@
                 navigator.serviceWorker.register('service-worker.js').then(reg => {
                     // Paksa cek update ke server setiap kali aplikasi dibuka
                     reg.update();
+
+                    // Deteksi jika ada versi baru yang sedang diunduh
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            // Jika versi baru selesai diunduh dan siap
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Kirim sinyal untuk langsung melewati fase "waiting" dan aktifkan
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
                 }).catch(err => console.log('SW fail', err));
 
-                // Jika ada SW baru yang aktif (Update selesai), reload halaman
+                // Jika Service Worker baru mengambil alih kendali, muat ulang aplikasi agar update tampil
                 let refreshing;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     if (refreshing) return;
@@ -289,6 +301,7 @@
         // --- VARIABEL & LOGIC ---
         let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
         let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
+        let isPrinting = false; // Tambahan variabel untuk mencegah cetak ganda
         window.audioCtx = null;
 
         const receiptList = document.getElementById('receipt-list');
@@ -397,298 +410,4 @@
 
         function updateDisplay() {
             if (!isPaymentMode) {
-                if (!expression) {
-                    receiptList.innerHTML = '<div class="receipt-item active">0</div>'; mainDisplay.innerText = "0";
-                } else {
-                    // Split berdasarkan + dan - untuk baris baru
-                    let parts = expression.split(/([+\-])/);
-                    let html = '';
-                    
-                    const createItem = (op, content, isActive) => {
-                        let formatted = formatVisual(content);
-                        let subRes = "";
-                        if (content.match(/[\*\/]/) && !content.match(/[\*\/]$/)) {
-                            try {
-                                let val = eval(content);
-                                if (!isNaN(val)) subRes = "= " + val.toLocaleString('id-ID');
-                            } catch(e) {}
-                        }
-                        
-                        let itemStyle = subRes ? 'display:flex; justify-content:space-between;' : '';
-                        let rightSide = subRes ? `<span style="opacity:0.8">${subRes}</span>` : '';
-                        
-                        return `<div class="receipt-item ${isActive}" style="${itemStyle}">
-                            <span>${op} ${formatted}</span>
-                            ${rightSide}
-                        </div>`;
-                    };
-
-                    if (parts.length > 0) {
-                        let content = parts[0];
-                        if (content !== "" || parts.length === 1) {
-                             let isActive = (parts.length === 1) ? 'active' : '';
-                             html += createItem('', content || '0', isActive);
-                        }
-                    }
-
-                    for (let i = 1; i < parts.length; i += 2) {
-                        let operator = parts[i];
-                        let content = parts[i+1] || "";
-                        let isActive = (i + 2 >= parts.length) ? 'active' : '';
-                        html += createItem(operator, content, isActive);
-                    }
-                    
-                    receiptList.innerHTML = html;
-                    
-                    try {
-                        let evalExpr = expression;
-                        if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
-                        if(evalExpr) mainDisplay.innerText = eval(evalExpr).toLocaleString('id-ID');
-                    } catch (e) { }
-                }
-                scrollToBottom();
-            } else {
-                let val = parseInt(paymentInput || "0");
-                payInputDisplay.innerText = val.toLocaleString('id-ID');
-                let change = val - totalBill;
-                if (change >= 0) {
-                    payChangeDisplay.innerText = "Rp " + change.toLocaleString('id-ID');
-                    payChangeDisplay.style.color = "#059669";
-                } else {
-                    payChangeDisplay.innerText = "Kurang Rp " + Math.abs(change).toLocaleString('id-ID');
-                    payChangeDisplay.style.color = "#dc2626";
-                }
-            }
-        }
-
-        function appendNum(num) {
-            if(!isPaymentMode) { saveState(); if(expression==="0" && num!==".") expression=""; expression+=num; }
-            else { if(paymentInput.length>12) return; paymentInput+=num; }
-            updateDisplay();
-        }
-        function appendOp(op) {
-            if(isPaymentMode || expression==="") return;
-            // Tidak ada hitung otomatis (collapse) agar list barang terjaga
-            saveState();
-            if(['+','-','*','/'].includes(expression.slice(-1))) expression = expression.slice(0,-1)+op;
-            else expression+=op;
-            updateDisplay();
-        }
-        function backspace() {
-            if(!isPaymentMode) { saveState(); expression = expression.slice(0,-1); if(expression==="") expression="0"; }
-            else paymentInput = paymentInput.slice(0,-1);
-            updateDisplay();
-        }
-        function clearAll() { if(!isPaymentMode) saveState(); expression=""; paymentInput=""; totalBill=0; isPaymentMode=false; switchModeUI(false); updateDisplay(); }
-        function editTransaction() { isPaymentMode=false; paymentInput=""; switchModeUI(false); }
-
-        function calculate() {
-            try {
-                if(!expression) return 0;
-                let evalExpr = expression;
-                if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
-                if(!evalExpr) return 0;
-                let result = eval(evalExpr);
-                totalBill = result;
-                mainDisplay.innerText = result.toLocaleString('id-ID');
-                return result;
-            } catch(e) { return 0; }
-        }
-
-        function handleMainAction() {
-            if(!isPaymentMode) {
-                let total = calculate();
-                if(total <= 0) { alert("Total 0 atau Error."); return; }
-                totalBill = total; paymentInput=""; isPaymentMode=true;
-                payTotalDisplay.innerText = "Rp " + totalBill.toLocaleString('id-ID');
-                switchModeUI(true); updateDisplay();
-            } else finishTransaction(true);
-        }
-
-        function switchModeUI(isPay) {
-            const vCalc = document.getElementById('view-calc'); const vPay = document.getElementById('view-pay');
-            if(isPay) { vCalc.style.display='none'; vPay.style.display='flex'; document.body.classList.add('mode-payment'); btnMain.innerText="🖨️ CETAK"; }
-            else { vCalc.style.display='flex'; vPay.style.display='none'; document.body.classList.remove('mode-payment'); btnMain.innerText="BAYAR"; }
-        }
-
-        async function finishTransaction(print) {
-            let pay = parseInt(paymentInput || "0");
-            if(pay < totalBill) { alert("Uang kurang!"); return; }
-            let change = pay - totalBill;
-            
-            if (print) {
-                if (!printerCharacteristic) {
-                    if(confirm("Printer belum terhubung. Hubungkan sekarang?")) await connectBluetooth();
-                }
-                
-                if (printerCharacteristic) {
-                    saveHistory(totalBill, pay, change);
-                    await printReceipt(totalBill, pay, change);
-                    clearAll();
-                } else {
-                    if(confirm("Gagal konek. Simpan saja?")) { saveHistory(totalBill, pay, change); clearAll(); }
-                }
-            } else {
-                saveHistory(totalBill, pay, change);
-                clearAll();
-            }
-        }
-
-        function saveHistory(total, pay, change) {
-            let history = JSON.parse(localStorage.getItem('tx_history')) || [];
-            history.unshift({ date: new Date().toLocaleString('id-ID'), total: total, pay: pay, change: change });
-            if(history.length > 50) history.pop();
-            localStorage.setItem('tx_history', JSON.stringify(history));
-        }
-
-        function showHistory() {
-            let h = JSON.parse(localStorage.getItem('tx_history')) || [];
-            if(h.length === 0) { alert("Belum ada riwayat."); return; }
-            let msg = h.map(x => `📅 ${x.date}\n💰 Total: ${x.total.toLocaleString()}\n💵 Bayar: ${x.pay.toLocaleString()}\n✅ Kembali: ${x.change.toLocaleString()}\n-----------------`).join('\n');
-            alert(msg);
-        }
-
-        // --- BLUETOOTH (SIMPLE STABLE VERSION) ---
-        async function connectBluetooth() {
-            if (!navigator.bluetooth) {
-                alert("Browser ini tidak mendukung koneksi Bluetooth langsung.\nHarap update Google Chrome ke versi terbaru (versi 56+).");
-                return;
-            }
-            try {
-                // Disconnect jika sudah terhubung untuk mereset status
-                if (printerDevice && printerDevice.gatt.connected) {
-                    printerDevice.gatt.disconnect();
-                }
-
-                printerDevice = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
-                
-                printerDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-                const server = await printerDevice.gatt.connect();
-                // Delay penting untuk HP lama
-                await new Promise(r => setTimeout(r, 500));
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                printerCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                btnBt.innerHTML = '🟢<br>Ready'; btnBt.style.backgroundColor = "#059669";
-            } catch (e) { 
-                alert("Gagal Konek: " + e); 
-                onDisconnected(); 
-            }
-        }
-
-        function onDisconnected() {
-            btnBt.innerHTML = '🖨️<br>Connect'; 
-            btnBt.style.backgroundColor = "#475569";
-            printerCharacteristic = null;
-        }
-
-        function strToBytes(str) {
-            const bytes = [];
-            for (let i = 0; i < str.length; i++) {
-                let code = str.charCodeAt(i);
-                if (code > 255) code = 63; 
-                bytes.push(code);
-            }
-            return new Uint8Array(bytes);
-        }
-
-        async function printReceipt(total, pay, change) {
-            if (!printerCharacteristic) { alert("Printer tidak terhubung!"); return; }
-            try {
-                const ESC = '\u001B'; const GS = '\u001D';
-                const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
-                const boldOn = ESC + 'E' + '\u0001'; const boldOff = ESC + 'E' + '\u0000';
-                const bigFont = GS + '!' + '\u0011'; const normalFont = GS + '!' + '\u0000';
-                const init = ESC + '@';
-
-                const now = new Date();
-                const dateStr = now.toLocaleDateString('id-ID');
-                const timeStr = now.toLocaleTimeString('id-ID');
-
-                let evalExpr = expression;
-                if(['+','-','*','/'].includes(evalExpr.slice(-1))) evalExpr = evalExpr.slice(0,-1);
-                
-                let rawParts = evalExpr.split(/([+\-])/);
-                let printItems = [];
-                
-                if (rawParts.length > 0 && rawParts[0]) {
-                    printItems.push({op: '', val: rawParts[0]});
-                }
-                
-                for (let i = 1; i < rawParts.length; i += 2) {
-                    if (rawParts[i+1]) {
-                        printItems.push({op: rawParts[i], val: rawParts[i+1]});
-                    }
-                }
-
-                let itemsOutput = "";
-                let itemCount = 0;
-                
-                printItems.forEach((itemObj, index) => {
-                    let cleanItem = itemObj.val.trim();
-                    if(!cleanItem) return;
-                    itemCount++;
-                    
-                    let qty = 1; let price = 0;
-                    if(cleanItem.includes('*')) {
-                        let parts = cleanItem.split('*');
-                        let v1 = parseInt(parts[0]); let v2 = parseInt(parts[1]);
-                        if(!isNaN(v1) && !isNaN(v2)) { price = Math.max(v1, v2); qty = Math.min(v1, v2); }
-                    } else { try { price = parseInt(eval(cleanItem)); } catch(e) { } }
-                    
-                    let sign = (itemObj.op === '-') ? '- ' : ''; 
-                    
-                    // --- UPDATE CETAK STRUK: TAMBAHKAN TOTAL JIKA QTY > 1 ---
-                    let lineTotal = qty * price;
-                    itemsOutput += `Brg ${index + 1} : ${qty} x ${sign}Rp ${price.toLocaleString('id-ID')}`;
-                    if(qty > 1) {
-                        itemsOutput += ` = Rp ${lineTotal.toLocaleString('id-ID')}`;
-                    }
-                    itemsOutput += `\n`;
-                    // ---------------------------------------------------------
-                });
-
-                let summaryLine = `Jml Jenis Barang ${itemCount}\n`;
-
-                let receiptText = 
-                    init + 
-                    center + boldOn + bigFont + "TOKO ADS" + normalFont + boldOff + "\n" +
-                    "0812-3085-078 (WA)\n" +
-                    "Jl. Sukodono No.92 Ganting\n" +
-                    "Kec. Gedangan, Kab. Sidoarjo\n" +
-                    "--------------------------------\n" +
-                    left + 
-                    `Tgl : ${dateStr} ${timeStr}\n` +
-                    "--------------------------------\n" +
-                    itemsOutput + "\n" + summaryLine +
-                    "--------------------------------\n" +
-                    boldOn + 
-                    `TOTAL   : Rp ${total.toLocaleString('id-ID')}\n` +
-                    boldOff +
-                    `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
-                    `KEMBALI : Rp ${change.toLocaleString('id-ID')}\n` +
-                    "--------------------------------\n" +
-                    center + "Pesan Barang W.A: 0856-4883-0413\n" +
-                    "Terima Kasih, Semoga Berkah\n\n\n";
-
-                let encodedData;
-                if (typeof TextEncoder !== 'undefined') {
-                    encodedData = new TextEncoder().encode(receiptText);
-                } else {
-                    encodedData = strToBytes(receiptText);
-                }
-                
-                const maxChunk = 50; 
-                for (let i = 0; i < encodedData.length; i += maxChunk) {
-                    const chunk = encodedData.slice(i, i + maxChunk);
-                    await printerCharacteristic.writeValue(chunk);
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-            } catch (error) { 
-                alert("Gagal mencetak: " + error); 
-                onDisconnected();
-            }
-        }
-    </script>
-</body>
-</html>
+     
