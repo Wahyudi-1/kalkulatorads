@@ -296,29 +296,62 @@
         }
 
         // --- PWA UPDATE AUTOMATION ---
-        if('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then(reg => {
-                    reg.update();
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                            }
-                        });
-                    });
-                }).catch(err => console.log('SW fail', err));
+        const CACHE_NAME = 'kalkulator-ads-v2'; // Ingat untuk menaikkan angka versi (v3, v4, dst) setiap kali ada update di HTML
+const urlsToCache = [
+  './',
+  './KalkulatorKasirPro.html', // Sesuaikan dengan nama file HTML Anda
+  './manifest.json'
+];
 
-                let refreshing;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (refreshing) return;
-                    window.location.reload();
-                    refreshing = true;
-                });
-            });
+// Install: Cache semua file penting saat pertama kali dibuka atau ada update
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Membuka cache dan menyimpan file PWA');
+        return cache.addAll(urlsToCache);
+      })
+  );
+});
+
+// Activate: Bersihkan cache lama jika ada update versi (CACHE_NAME berubah)
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Menghapus cache versi lama:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim();
+});
+
+// Fetch: Layani request dari Cache dulu (Offline First), jika tidak ada baru ke Network
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        if (response) {
+          return response;
         }
+        return fetch(event.request);
+      })
+  );
+});
 
+// --- TARUH KODENYA DI SINI (BARIS PALING BAWAH) ---
+// Message Listener: Menerima perintah dari HTML untuk langsung menerapkan update
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('Menerapkan update Service Worker ke versi baru...');
+    self.skipWaiting();
+  }
+});
         // --- VARIABEL & LOGIC ---
         let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
         let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
