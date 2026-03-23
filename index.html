@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kalkulator ADS">
-    <meta name="application-name" content="Kalkulator ADS">
+    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
+    <meta name="application-name" content="Kasir Pro">
 
-    <title>Kalkulator ADS</title>
+    <title>Kasir Pedagang Pro</title>
     <link rel="manifest" id="manifest-placeholder" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
@@ -34,7 +34,10 @@
         }
 
         body {
-            font-family: arial;
+            /* MENGUNCI FONT AGAR TIDAK ADA NOL TERCoret DI LAYAR HP */
+            font-family: Arial, Helvetica, sans-serif;
+            font-variant-numeric: normal;
+            
             background-color: var(--bg-color);
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
             display: grid;
@@ -137,6 +140,7 @@
 
         button {
             border: none; border-radius: 6px; 
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 24px;
             font-size: clamp(1.5rem, 4vh, 2.5rem); 
             font-weight: 700; cursor: pointer; color: var(--text-main); background: var(--btn-num-bg);
@@ -258,7 +262,7 @@
 
     <script>
         // --- SETUP DASAR ---
-        const manifestData={"name":"Kalkulator ADS","short_name":"Kalkulator ADS","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
+        const manifestData={"name":"Kasir Pedagang Pro","short_name":"Kasir Pro","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>","sizes":"192x192","type":"image/svg+xml"}]};
         
         const manifestEl = document.getElementById('manifest-placeholder');
         if (manifestEl) {
@@ -318,7 +322,12 @@
         // --- VARIABEL & LOGIC ---
         let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
         let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
-        let isPrinting = false; // Mencegah cetak ganda
+        let isPrinting = false;
+        
+        // OPSI: Jika tulisan dari printer angka 0-nya tercoret dan Anda ingin mengubahnya, 
+        // ubah "false" di bawah ini menjadi "true". Ini akan mencoba menggunakan Font B pada printer.
+        let usePrinterFontB = true; 
+
         window.audioCtx = null;
 
         const receiptList = document.getElementById('receipt-list');
@@ -493,7 +502,7 @@
         }
 
         async function finishTransaction(print) {
-            if (isPrinting) return; // Mencegah cetak ganda saat diklik berturut-turut
+            if (isPrinting) return; 
             
             let pay = parseInt(paymentInput || "0");
             let change = pay - totalBill;
@@ -505,7 +514,7 @@
                         if(confirm("Printer belum terhubung. Hubungkan sekarang?")) await connectBluetooth();
                     }
                     if (printerCharacteristic) {
-                        saveHistory(totalBill, pay, change, expression); // Simpan expression untuk cetak ulang
+                        saveHistory(totalBill, pay, change, expression); 
                         await printReceipt(totalBill, pay, change, expression);
                         clearAll();
                     } else {
@@ -516,11 +525,10 @@
                     clearAll();
                 }
             } finally {
-                isPrinting = false; // Buka kunci proses setelah selesai
+                isPrinting = false; 
             }
         }
 
-        // Simpan Data Riwayat Lengkap
         function saveHistory(total, pay, change, expr) {
             let history = JSON.parse(localStorage.getItem('tx_history')) || [];
             history.unshift({ 
@@ -529,13 +537,12 @@
                 total: total, 
                 pay: pay, 
                 change: change,
-                expression: expr // Data ini dipakai untuk merakit ulang item struk
+                expression: expr
             });
             if(history.length > 50) history.pop();
             localStorage.setItem('tx_history', JSON.stringify(history));
         }
 
-        // Tampilkan Modal Riwayat
         function showHistory() {
             let h = JSON.parse(localStorage.getItem('tx_history')) || [];
             let list = document.getElementById('history-list');
@@ -596,14 +603,19 @@
             return new Uint8Array(bytes);
         }
 
-        // Core pencetakan struk (dipakai untuk transaksi baru & cetak ulang)
         async function printReceiptCore(total, pay, change, exprData, isReprint, dateStr, timeStr) {
             if (!printerCharacteristic) { alert("Printer tidak terhubung!"); return; }
             try {
                 const ESC = '\u001B'; const GS = '\u001D';
                 const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
                 const boldOn = ESC + 'E' + '\u0001'; const boldOff = ESC + 'E' + '\u0000';
-                const bigFont = GS + '!' + '\u0011'; const normalFont = GS + '!' + '\u0000';
+                
+                // LOGIKA PENGGANTIAN FONT PRINTER
+                const fontA = GS + '!' + '\u0000'; // Font normal bawaan
+                const fontB = ESC + 'M' + '\u0001'; // Font sekunder yang lebih kecil (biasanya nol tidak coret)
+                const normalFont = usePrinterFontB ? fontB : fontA; 
+                
+                const bigFont = GS + '!' + '\u0011'; 
                 const init = ESC + '@';
 
                 let evalExpr = exprData || "0";
@@ -663,7 +675,7 @@
                     `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
                     changeText +
                     "--------------------------------\n" +
-                    center + "Pesan Barang W.A: 0856-4883-0413\n" +
+                    center + "Pesan Barang W.A: Whatsapp pesan\n" +
                     "Terima Kasih, Semoga Berkah\n\n\n";
 
                 let encodedData = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(receiptText) : strToBytes(receiptText);
@@ -680,13 +692,11 @@
             }
         }
 
-        // Fungsi asli yang dipakai saat bayar
         async function printReceipt(total, pay, change, expr) {
             const now = new Date();
             await printReceiptCore(total, pay, change, expr, false, now.toLocaleDateString('id-ID'), now.toLocaleTimeString('id-ID'));
         }
 
-        // Fungsi baru untuk cetak ulang dari riwayat
         async function reprintReceipt(index) {
             if (isPrinting) return;
             let h = JSON.parse(localStorage.getItem('tx_history')) || [];
