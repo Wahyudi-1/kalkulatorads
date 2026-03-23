@@ -681,7 +681,7 @@ self.addEventListener('message', (event) => {
                     
                     let sign = (itemObj.op === '-') ? '- ' : ''; 
                     let lineTotal = qty * price;
-                    itemsOutput += `Brg ${index + 1} : ${qty} x ${sign}Rp${price.toLocaleString('id-ID')}`;
+                    itemsOutput += `Brg ${index + 1}: ${qty}x${sign}Rp${price.toLocaleString('id-ID')}`;
                     if(qty > 1) itemsOutput += ` = Rp${lineTotal.toLocaleString('id-ID')}`;
                     itemsOutput += `\n`;
                 });
