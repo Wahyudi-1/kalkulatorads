@@ -324,9 +324,13 @@
         let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
         let isPrinting = false;
         
-        // OPSI: Jika tulisan dari printer angka 0-nya tercoret dan Anda ingin mengubahnya, 
-        // ubah "false" di bawah ini menjadi "true". Ini akan mencoba menggunakan Font B pada printer.
+        // OPSI: Ubah menjadi "true" jika Anda ingin menggunakan Font B 
+        // (ukuran huruf lebih kecil dan padat, cocok jika nama barang sangat panjang)
         let usePrinterFontB = false; 
+
+        // TRIK MENGHILANGKAN ZERO SLASH: Mengganti angka '0' menjadi huruf 'O' besar 
+        // saat dicetak agar ukuran tetap besar namun tanpa coretan di tengahnya.
+        let replaceZeroWithO = true;
 
         window.audioCtx = null;
 
@@ -610,9 +614,9 @@
                 const center = ESC + 'a' + '\u0001'; const left = ESC + 'a' + '\u0000';
                 const boldOn = ESC + 'E' + '\u0001'; const boldOff = ESC + 'E' + '\u0000';
                 
-                // LOGIKA PENGGANTIAN FONT PRINTER
-                const fontA = GS + '!' + '\u0000'; // Font normal bawaan
-                const fontB = ESC + 'M' + '\u0001'; // Font sekunder yang lebih kecil (biasanya nol tidak coret)
+                // LOGIKA PENGGANTIAN UKURAN FONT PRINTER
+                const fontA = GS + '!' + '\u0000'; // Font normal bawaan (12x24)
+                const fontB = ESC + 'M' + '\u0001'; // Font sekunder yang lebih kecil/padat (9x17)
                 const normalFont = usePrinterFontB ? fontB : fontA; 
                 
                 const bigFont = GS + '!' + '\u0011'; 
@@ -677,6 +681,11 @@
                     "--------------------------------\n" +
                     center + "Pesan Barang W.A: Whatsapp pesan\n" +
                     "Terima Kasih, Semoga Berkah\n\n\n";
+
+                // Terapkan trik menghilangkan Zero Slash
+                if (replaceZeroWithO) {
+                    receiptText = receiptText.replace(/0/g, 'O');
+                }
 
                 let encodedData = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(receiptText) : strToBytes(receiptText);
                 
