@@ -598,8 +598,8 @@ self.addEventListener('message', (event) => {
                     html += `
                     <div class="history-card">
                         <div class="history-time">📅 ${dateDisplay}</div>
-                        <div class="history-total">Total: Rp${(x.total || 0).toLocaleString('id-ID')}</div>
-                        <div class="history-details">Bayar: Rp${(x.pay || 0).toLocaleString('id-ID')}<br>${changeText}</div>
+                        <div class="history-total">Total: Rp ${(x.total || 0).toLocaleString('id-ID')}</div>
+                        <div class="history-details">Bayar: Rp ${(x.pay || 0).toLocaleString('id-ID')}<br>${changeText}</div>
                         <button class="btn-reprint" onclick="reprintReceipt(${i})">🖨️ Cetak Ulang Struk</button>
                     </div>`;
                 });
@@ -688,8 +688,8 @@ self.addEventListener('message', (event) => {
 
                 let summaryLine = `Jml Jenis Barang ${itemCount}\n`;
                 let changeText = "";
-                if (change >= 0) changeText = `KEMBALI : Rp${change.toLocaleString('id-ID')}\n`;
-                else changeText = `HUTANG  : Rp${Math.abs(change).toLocaleString('id-ID')}\n`;
+                if (change >= 0) changeText = `KEMBALI : Rp ${change.toLocaleString('id-ID')}\n`;
+                else changeText = `HUTANG  : Rp ${Math.abs(change).toLocaleString('id-ID')}\n`;
 
                 let reprintMarker = isReprint ? (center + normalFont + "(CETAK ULANG)\n" + left) : "";
 
@@ -707,9 +707,9 @@ self.addEventListener('message', (event) => {
                     itemsOutput + "\n" + summaryLine +
                     "--------------------------------\n" +
                     boldOn + 
-                    `TOTAL   : Rp${total.toLocaleString('id-ID')}\n` +
+                    `TOTAL   : Rp ${total.toLocaleString('id-ID')}\n` +
                     boldOff +
-                    `BAYAR   : Rp${pay.toLocaleString('id-ID')}\n` +
+                    `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
                     changeText +
                     "--------------------------------\n" +
                     center + "Pesan Barang W.A: 0856-4883-0413\n" +
