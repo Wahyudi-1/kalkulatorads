@@ -209,7 +209,7 @@
                     <span class="label-pay">TOTAL</span>
                     <button class="btn-edit-total" onclick="editTransaction()">UBAH</button>
                 </div>
-                <span id="pay-total">Rp 0</span>
+                <span id="pay-total">Rp0</span>
             </div>
             <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
                 <div style="text-align:right; font-size:14px; color:#64748b;">Uang Pelanggan:</div>
@@ -217,7 +217,7 @@
             </div>
             <div class="pay-row">
                 <span class="label-pay" id="pay-change-label">KEMBALI</span>
-                <span id="pay-change-display">Rp 0</span>
+                <span id="pay-change-display">Rp0</span>
             </div>
         </div>
     </div>
@@ -446,11 +446,11 @@
                 let change = val - totalBill;
                 if (change >= 0) {
                     document.getElementById('pay-change-label').innerText = "KEMBALI";
-                    payChangeDisplay.innerText = "Rp " + change.toLocaleString('id-ID');
+                    payChangeDisplay.innerText = "Rp" + change.toLocaleString('id-ID');
                     payChangeDisplay.style.color = "#059669";
                 } else {
                     document.getElementById('pay-change-label').innerText = "HUTANG";
-                    payChangeDisplay.innerText = "Rp " + Math.abs(change).toLocaleString('id-ID');
+                    payChangeDisplay.innerText = "Rp" + Math.abs(change).toLocaleString('id-ID');
                     payChangeDisplay.style.color = "#dc2626";
                 }
             }
@@ -494,7 +494,7 @@
                 let total = calculate();
                 if(total <= 0) { alert("Total 0 atau Error."); return; }
                 totalBill = total; paymentInput=""; isPaymentMode=true;
-                payTotalDisplay.innerText = "Rp " + totalBill.toLocaleString('id-ID');
+                payTotalDisplay.innerText = "Rp" + totalBill.toLocaleString('id-ID');
                 switchModeUI(true); updateDisplay();
             } else finishTransaction(true);
         }
@@ -557,16 +557,16 @@
                 let html = "";
                 h.forEach((x, i) => {
                     let changeText = x.change >= 0 
-                        ? `<span style="color:#059669; font-weight:bold;">Kembali: Rp ${x.change.toLocaleString('id-ID')}</span>` 
-                        : `<span style="color:#dc2626; font-weight:bold;">Hutang: Rp ${Math.abs(x.change).toLocaleString('id-ID')}</span>`;
+                        ? `<span style="color:#059669; font-weight:bold;">Kembali: Rp${x.change.toLocaleString('id-ID')}</span>` 
+                        : `<span style="color:#dc2626; font-weight:bold;">Hutang: Rp${Math.abs(x.change).toLocaleString('id-ID')}</span>`;
                     
                     let dateDisplay = x.dateStr ? `${x.dateStr} ${x.timeStr}` : (x.date || '-');
 
                     html += `
                     <div class="history-card">
                         <div class="history-time">📅 ${dateDisplay}</div>
-                        <div class="history-total">Total: Rp ${(x.total || 0).toLocaleString('id-ID')}</div>
-                        <div class="history-details">Bayar: Rp ${(x.pay || 0).toLocaleString('id-ID')}<br>${changeText}</div>
+                        <div class="history-total">Total: Rp${(x.total || 0).toLocaleString('id-ID')}</div>
+                        <div class="history-details">Bayar: Rp${(x.pay || 0).toLocaleString('id-ID')}<br>${changeText}</div>
                         <button class="btn-reprint" onclick="reprintReceipt(${i})">🖨️ Cetak Ulang Struk</button>
                     </div>`;
                 });
@@ -648,15 +648,15 @@
                     
                     let sign = (itemObj.op === '-') ? '- ' : ''; 
                     let lineTotal = qty * price;
-                    itemsOutput += `Brg ${index + 1} : ${qty} x ${sign}Rp ${price.toLocaleString('id-ID')}`;
-                    if(qty > 1) itemsOutput += ` = Rp ${lineTotal.toLocaleString('id-ID')}`;
+                    itemsOutput += `Brg ${index + 1} : ${qty} x ${sign}Rp${price.toLocaleString('id-ID')}`;
+                    if(qty > 1) itemsOutput += ` = Rp${lineTotal.toLocaleString('id-ID')}`;
                     itemsOutput += `\n`;
                 });
 
                 let summaryLine = `Jml Jenis Barang ${itemCount}\n`;
                 let changeText = "";
-                if (change >= 0) changeText = `KEMBALI : Rp ${change.toLocaleString('id-ID')}\n`;
-                else changeText = `HUTANG  : Rp ${Math.abs(change).toLocaleString('id-ID')}\n`;
+                if (change >= 0) changeText = `KEMBALI : Rp${change.toLocaleString('id-ID')}\n`;
+                else changeText = `HUTANG  : Rp${Math.abs(change).toLocaleString('id-ID')}\n`;
 
                 let reprintMarker = isReprint ? (center + normalFont + "(CETAK ULANG)\n" + left) : "";
 
@@ -674,12 +674,12 @@
                     itemsOutput + "\n" + summaryLine +
                     "--------------------------------\n" +
                     boldOn + 
-                    `TOTAL   : Rp ${total.toLocaleString('id-ID')}\n` +
+                    `TOTAL   : Rp${total.toLocaleString('id-ID')}\n` +
                     boldOff +
-                    `BAYAR   : Rp ${pay.toLocaleString('id-ID')}\n` +
+                    `BAYAR   : Rp${pay.toLocaleString('id-ID')}\n` +
                     changeText +
                     "--------------------------------\n" +
-                    center + "Pesan Barang W.A: Whatsapp pesan\n" +
+                    center + "Pesan Barang W.A: 0856-4883-0413\n" +
                     "Terima Kasih, Semoga Berkah\n\n\n";
 
                 // Terapkan trik menghilangkan Zero Slash
