@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
-    <meta name="application-name" content="Kasir Pro">
+    <meta name="apple-mobile-web-app-title" content="Kalkulator ADS">
+    <meta name="application-name" content="Kalkulator ADS">
 
-    <title>Kasir Pedagang Pro</title>
+    <title>Kalkulator ADS</title>
     <link rel="manifest" id="manifest-placeholder" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
@@ -177,6 +177,7 @@
 </head>
 <body id="body-app">
 
+    <!-- MODAL POPUP RIWAYAT -->
     <div id="history-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -184,7 +185,8 @@
                 <button class="modal-close" onclick="closeHistory()">&times;</button>
             </div>
             <div class="modal-body" id="history-list">
-                </div>
+                <!-- Data Riwayat Diisi via JS -->
+            </div>
         </div>
     </div>
 
@@ -221,31 +223,37 @@
     </div>
 
     <div class="keypad-container" id="keypad">
+        <!-- BARIS 1 -->
         <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<br>Suara</button>
         <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<br>Connect</button>
         <button class="btn-tool" onclick="showHistory()">📜<br>Riwayat</button>
         <button class="btn-undo" onclick="undoLastAction()">↩️<br>Batal</button>
 
+        <!-- BARIS 2 -->
         <button class="btn-clear" onclick="clearAll()">AC</button>
         <button class="btn-rotate" onclick="toggleOrientation()">⟳<br>Putar</button>
         <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
         <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
 
+        <!-- BARIS 3 -->
         <button onclick="appendNum('7')" class="virtual-key">7</button>
         <button onclick="appendNum('8')" class="virtual-key">8</button>
         <button onclick="appendNum('9')" class="virtual-key">9</button>
         <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
 
+        <!-- BARIS 4 -->
         <button onclick="appendNum('4')" class="virtual-key">4</button>
         <button onclick="appendNum('5')" class="virtual-key">5</button>
         <button onclick="appendNum('6')" class="virtual-key">6</button>
         <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
 
+        <!-- BARIS 5 -->
         <button onclick="appendNum('1')" class="virtual-key">1</button>
         <button onclick="appendNum('2')" class="virtual-key">2</button>
         <button onclick="appendNum('3')" class="virtual-key">3</button>
         <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
 
+        <!-- BARIS 6 -->
         <button onclick="appendNum('0')" class="virtual-key">0</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('00')">00</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('000')">000</button>
@@ -287,7 +295,7 @@
             }
         }
 
-        // --- PWA UPDATE AUTOMATION ---
+        // --- PWA UPDATE AUTOMATION (DIPERBAIKI) ---
         if('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js').then(reg => {
@@ -682,7 +690,7 @@
 
                 let reprintMarker = isReprint ? (center + normalFont + "(CETAK ULANG)\n" + left) : "";
                 // Baris tampilan No Urut Transaksi (Tepat di bawah tanggal)
-                let txLine = txNumber ? `No. Transaksi: ${txNumber}\n` : "";
+                let txLine = txNumber ? `No. Transaksi : ${txNumber}\n` : "";
 
                 let receiptText = 
                     init + 
