@@ -8,14 +8,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kalkulator ADS">
-    <meta name="application-name" content="Kalkulator ADS">
+    <meta name="apple-mobile-web-app-title" content="Kasir Pro">
+    <meta name="application-name" content="Kasir Pro">
 
-    <title>Kalkulator ADS</title>
+    <title>Kasir Pedagang Pro</title>
     <link rel="manifest" id="manifest-placeholder" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 
-    
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
@@ -178,7 +177,6 @@
 </head>
 <body id="body-app">
 
-    <!-- MODAL POPUP RIWAYAT -->
     <div id="history-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -186,8 +184,7 @@
                 <button class="modal-close" onclick="closeHistory()">&times;</button>
             </div>
             <div class="modal-body" id="history-list">
-                <!-- Data Riwayat Diisi via JS -->
-            </div>
+                </div>
         </div>
     </div>
 
@@ -224,37 +221,31 @@
     </div>
 
     <div class="keypad-container" id="keypad">
-        <!-- BARIS 1 -->
         <button class="btn-tool" onclick="toggleSound()" id="btn-sound">🔊<br>Suara</button>
         <button class="btn-tool" onclick="connectBluetooth()" id="btn-bt">🖨️<br>Connect</button>
         <button class="btn-tool" onclick="showHistory()">📜<br>Riwayat</button>
         <button class="btn-undo" onclick="undoLastAction()">↩️<br>Batal</button>
 
-        <!-- BARIS 2 -->
         <button class="btn-clear" onclick="clearAll()">AC</button>
         <button class="btn-rotate" onclick="toggleOrientation()">⟳<br>Putar</button>
         <button id="btn-main-action" class="btn-pay" onclick="handleMainAction()">BAYAR</button>
         <button class="btn-backspace virtual-key" onclick="backspace()">⌫</button>
 
-        <!-- BARIS 3 -->
         <button onclick="appendNum('7')" class="virtual-key">7</button>
         <button onclick="appendNum('8')" class="virtual-key">8</button>
         <button onclick="appendNum('9')" class="virtual-key">9</button>
         <button class="btn-op virtual-key" onclick="appendOp('/')">÷</button>
 
-        <!-- BARIS 4 -->
         <button onclick="appendNum('4')" class="virtual-key">4</button>
         <button onclick="appendNum('5')" class="virtual-key">5</button>
         <button onclick="appendNum('6')" class="virtual-key">6</button>
         <button class="btn-op virtual-key" onclick="appendOp('*')">×</button>
 
-        <!-- BARIS 5 -->
         <button onclick="appendNum('1')" class="virtual-key">1</button>
         <button onclick="appendNum('2')" class="virtual-key">2</button>
         <button onclick="appendNum('3')" class="virtual-key">3</button>
         <button class="btn-op virtual-key" onclick="appendOp('-')">-</button>
 
-        <!-- BARIS 6 -->
         <button onclick="appendNum('0')" class="virtual-key">0</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('00')">00</button>
         <button class="btn-zero-xx virtual-key" onclick="appendNum('000')">000</button>
@@ -297,62 +288,29 @@
         }
 
         // --- PWA UPDATE AUTOMATION ---
-        const CACHE_NAME = 'kalkulator-ads-v2'; // Ingat untuk menaikkan angka versi (v3, v4, dst) setiap kali ada update di HTML
-const urlsToCache = [
-  './',
-  './KalkulatorKasirPro.html', // Sesuaikan dengan nama file HTML Anda
-  './manifest.json'
-];
+        if('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(reg => {
+                    reg.update();
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+                }).catch(err => console.log('SW fail', err));
 
-// Install: Cache semua file penting saat pertama kali dibuka atau ada update
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Membuka cache dan menyimpan file PWA');
-        return cache.addAll(urlsToCache);
-      })
-  );
-});
-
-// Activate: Bersihkan cache lama jika ada update versi (CACHE_NAME berubah)
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Menghapus cache versi lama:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  return self.clients.claim();
-});
-
-// Fetch: Layani request dari Cache dulu (Offline First), jika tidak ada baru ke Network
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
+                let refreshing;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) return;
+                    window.location.reload();
+                    refreshing = true;
+                });
+            });
         }
-        return fetch(event.request);
-      })
-  );
-});
 
-// --- TARUH KODENYA DI SINI (BARIS PALING BAWAH) ---
-// Message Listener: Menerima perintah dari HTML untuk langsung menerapkan update
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('Menerapkan update Service Worker ke versi baru...');
-    self.skipWaiting();
-  }
-});
         // --- VARIABEL & LOGIC ---
         let expression="", totalBill=0, paymentInput="", isPaymentMode=false, isSoundOn=true;
         let printerDevice=null, printerCharacteristic=null, inputHistory=[], lastTap=0;
@@ -539,6 +497,26 @@ self.addEventListener('message', (event) => {
             else { vCalc.style.display='flex'; vPay.style.display='none'; document.body.classList.remove('mode-payment'); btnMain.innerText="BAYAR"; }
         }
 
+        // --- LOGIKA NO URUT TRANSAKSI ---
+        function getNextTxNumber() {
+            let now = new Date();
+            // Format bulan unik: Tahun-Bulan (cth: 2026-5)
+            let currentMonth = now.getFullYear() + "-" + (now.getMonth() + 1); 
+            let storedMonth = localStorage.getItem('tx_month');
+            let counter = parseInt(localStorage.getItem('tx_counter')) || 0;
+
+            // Jika berganti bulan, reset nomor kembali ke 1
+            if (currentMonth !== storedMonth) {
+                counter = 1;
+                localStorage.setItem('tx_month', currentMonth);
+            } else {
+                counter += 1;
+            }
+            
+            localStorage.setItem('tx_counter', counter);
+            return counter;
+        }
+
         async function finishTransaction(print) {
             if (isPrinting) return; 
             
@@ -552,14 +530,20 @@ self.addEventListener('message', (event) => {
                         if(confirm("Printer belum terhubung. Hubungkan sekarang?")) await connectBluetooth();
                     }
                     if (printerCharacteristic) {
-                        saveHistory(totalBill, pay, change, expression); 
-                        await printReceipt(totalBill, pay, change, expression);
+                        let txNum = getNextTxNumber(); // Generate nomor urut baru saat akan disimpan
+                        saveHistory(totalBill, pay, change, expression, txNum); 
+                        await printReceipt(totalBill, pay, change, expression, txNum);
                         clearAll();
                     } else {
-                        if(confirm("Gagal konek. Simpan saja?")) { saveHistory(totalBill, pay, change, expression); clearAll(); }
+                        if(confirm("Gagal konek. Simpan saja?")) { 
+                            let txNum = getNextTxNumber();
+                            saveHistory(totalBill, pay, change, expression, txNum); 
+                            clearAll(); 
+                        }
                     }
                 } else {
-                    saveHistory(totalBill, pay, change, expression);
+                    let txNum = getNextTxNumber();
+                    saveHistory(totalBill, pay, change, expression, txNum);
                     clearAll();
                 }
             } finally {
@@ -567,7 +551,8 @@ self.addEventListener('message', (event) => {
             }
         }
 
-        function saveHistory(total, pay, change, expr) {
+        // Simpan Data Riwayat Lengkap (Termasuk No Urut)
+        function saveHistory(total, pay, change, expr, txNum) {
             let history = JSON.parse(localStorage.getItem('tx_history')) || [];
             history.unshift({ 
                 dateStr: new Date().toLocaleDateString('id-ID'), 
@@ -575,12 +560,14 @@ self.addEventListener('message', (event) => {
                 total: total, 
                 pay: pay, 
                 change: change,
-                expression: expr
+                expression: expr,
+                txNumber: txNum // Simpan nomor urut transaksi
             });
             if(history.length > 50) history.pop();
             localStorage.setItem('tx_history', JSON.stringify(history));
         }
 
+        // Tampilkan Modal Riwayat
         function showHistory() {
             let h = JSON.parse(localStorage.getItem('tx_history')) || [];
             let list = document.getElementById('history-list');
@@ -595,10 +582,11 @@ self.addEventListener('message', (event) => {
                         : `<span style="color:#dc2626; font-weight:bold;">Hutang: Rp${Math.abs(x.change).toLocaleString('id-ID')}</span>`;
                     
                     let dateDisplay = x.dateStr ? `${x.dateStr} ${x.timeStr}` : (x.date || '-');
+                    let txNumDisplay = x.txNumber ? ` | No. Transaksi: ${x.txNumber}` : '';
 
                     html += `
                     <div class="history-card">
-                        <div class="history-time">📅 ${dateDisplay}</div>
+                        <div class="history-time">📅 ${dateDisplay}${txNumDisplay}</div>
                         <div class="history-total">Total: Rp ${(x.total || 0).toLocaleString('id-ID')}</div>
                         <div class="history-details">Bayar: Rp ${(x.pay || 0).toLocaleString('id-ID')}<br>${changeText}</div>
                         <button class="btn-reprint" onclick="reprintReceipt(${i})">🖨️ Cetak Ulang Struk</button>
@@ -641,7 +629,7 @@ self.addEventListener('message', (event) => {
             return new Uint8Array(bytes);
         }
 
-        async function printReceiptCore(total, pay, change, exprData, isReprint, dateStr, timeStr) {
+        async function printReceiptCore(total, pay, change, exprData, isReprint, dateStr, timeStr, txNumber) {
             if (!printerCharacteristic) { alert("Printer tidak terhubung!"); return; }
             try {
                 const ESC = '\u001B'; const GS = '\u001D';
@@ -693,6 +681,8 @@ self.addEventListener('message', (event) => {
                 else changeText = `HUTANG  : Rp ${Math.abs(change).toLocaleString('id-ID')}\n`;
 
                 let reprintMarker = isReprint ? (center + normalFont + "(CETAK ULANG)\n" + left) : "";
+                // Baris tampilan No Urut Transaksi (Tepat di bawah tanggal)
+                let txLine = txNumber ? `No. Transaksi: ${txNumber}\n` : "";
 
                 let receiptText = 
                     init + 
@@ -704,6 +694,7 @@ self.addEventListener('message', (event) => {
                     "--------------------------------\n" +
                     left + 
                     `Tgl : ${dateStr} ${timeStr}\n` +
+                    txLine +
                     "--------------------------------\n" +
                     itemsOutput + "\n" + summaryLine +
                     "--------------------------------\n" +
@@ -735,9 +726,9 @@ self.addEventListener('message', (event) => {
             }
         }
 
-        async function printReceipt(total, pay, change, expr) {
+        async function printReceipt(total, pay, change, expr, txNum) {
             const now = new Date();
-            await printReceiptCore(total, pay, change, expr, false, now.toLocaleDateString('id-ID'), now.toLocaleTimeString('id-ID'));
+            await printReceiptCore(total, pay, change, expr, false, now.toLocaleDateString('id-ID'), now.toLocaleTimeString('id-ID'), txNum);
         }
 
         async function reprintReceipt(index) {
@@ -761,7 +752,8 @@ self.addEventListener('message', (event) => {
                 if (printerCharacteristic) {
                     let dStr = itemData.dateStr || itemData.date || '-';
                     let tStr = itemData.timeStr || '';
-                    await printReceiptCore(itemData.total, itemData.pay, itemData.change, itemData.expression, true, dStr, tStr);
+                    let txNum = itemData.txNumber || ''; // Ambil nomor urut asli
+                    await printReceiptCore(itemData.total, itemData.pay, itemData.change, itemData.expression, true, dStr, tStr, txNum);
                 }
             } finally {
                 isPrinting = false;
